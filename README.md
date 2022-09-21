@@ -1,2 +1,2 @@
-# Tealeaf-Flutter-Plugin
+# acoustic_tealeaf
 Flutter plugin for Tealeaf.

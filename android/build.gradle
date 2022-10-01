@@ -1,0 +1,66 @@
+group 'com.example.tl_flutter_plugin'
+version '1.0'
+
+buildscript {
+    ext.aspectj_version = "4.3.0"
+    ext.kotlin_version = '1.6.10'
+
+    repositories {
+        jcenter()
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.archinamon:android-gradle-aspectj:$aspectj_version"
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url "https://raw.githubusercontent.com/acoustic-analytics/Android_Maven/master"
+        }
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'com.archinamon.aspectj'
+
+android {
+    compileSdkVersion 31
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        minSdkVersion 16
+    }
+}
+
+dependencies {
+    //implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'com.google.android.material:material:1.2.1'
+
+    implementation 'com.ea:eocore:2.0.84'
+    implementation 'com.ea:tealeaf:10.3.119'
+    implementation 'com.ea:teacuts:3.0.7'
+}
+
+// Required for auto instrumentation using Teacuts library
+aspectj {
+    includeAllJars true
+    includeJar 'teacuts'
+    includeAspectsFromJar 'teacuts'
+}

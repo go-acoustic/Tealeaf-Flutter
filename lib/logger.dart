@@ -31,7 +31,6 @@ final dynamic _prettyPrinter = PrettyPrinter(
   lineLength: 140, // width of the output
   colors: false, // Colorful log messages
   printEmojis: false, // Print an emoji for each log message
-  printTime: true, // Should each log print time
 );
 
 final dynamic _verbosePrinter = io.Platform.isIOS ? _prettyPrinter : SimplePrinter();

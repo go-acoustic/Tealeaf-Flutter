@@ -5,10 +5,10 @@ import 'package:tl_flutter_plugin/tl_flutter_plugin.dart';
 import 'dart:convert';
 
 void main() {
-  const String PLATFORM = 'Arbitrary platform 47';
-  const String TEALEAF = '10.3.119';
-  const String PLUGIN = '0.0.1';
-  const String KEY = "valid key";
+  const String platform = 'Arbitrary platform 47';
+  const String tealeaf = '10.3.119';
+  const String plugin = '0.0.1';
+  const String key = "valid key";
 
   List<Map<String, dynamic>> layoutParameters = [
     {
@@ -45,7 +45,7 @@ void main() {
     // be a way to do this for all types, not just for Map (all that is needed for now)
     if (types.contains(Map) && parameter is Map) {
       const Type newType = Map;
-      print("Checked if type $type is a $newType");
+      debugPrint("Checked if type $type is a $newType");
       type = newType;
     }
 
@@ -78,13 +78,13 @@ void main() {
 
       switch (request.toLowerCase()) {
         case "getplatformversion":
-          return PLATFORM;
+          return platform;
         case "gettealeafversion":
-          return TEALEAF;
+          return tealeaf;
         case "getpluginversion":
-          return PLUGIN;
+          return plugin;
         case "getappkey":
-          return KEY;
+          return key;
         case 'gesture':
           if (!args.containsKey('tlType')) {
             throw Exception("Missing gesture type!");
@@ -166,7 +166,7 @@ void main() {
 
             if (!["LOAD", "UNLOAD", "VISIT"].contains(type)) {
               throw Exception(
-                  "Parameter tlType is not one of the supported TEALEAF screen types: $type");
+                  "Parameter tlType is not one of the supported tealeaf screen types: $type");
             }
             return null;
           }
@@ -182,16 +182,16 @@ void main() {
 
   group('PluginTealeaf method call interface', () {
     test('platformVersion', () async {
-      expect(await PluginTealeaf.platformVersion, PLATFORM);
+      expect(await PluginTealeaf.platformVersion, platform);
     });
     test('tealeafVersion', () async {
-      expect(await PluginTealeaf.tealeafVersion, TEALEAF);
+      expect(await PluginTealeaf.tealeafVersion, tealeaf);
     });
     test('pluginVersion', () async {
-      expect(await PluginTealeaf.pluginVersion, PLUGIN);
+      expect(await PluginTealeaf.pluginVersion, plugin);
     });
     test('appKey', () async {
-      expect(await PluginTealeaf.appKey, KEY);
+      expect(await PluginTealeaf.appKey, key);
     });
 
     test('tealeafSessionId', () async {
@@ -447,7 +447,7 @@ void main() {
         await PluginTealeaf.onTlPointerEvent(fields: ptrFields);
         result = 'ok';
       } on Exception catch (e, stack) {
-        print('$e, ${stack.toString()}');
+        debugPrint('$e, ${stack.toString()}');
         result = 'fail';
       }
       expect(result, 'ok');
@@ -471,7 +471,7 @@ void main() {
     test('onTlGestureEvent tripletap', () async {
       String result;
       try {
-        await PluginTealeaf.onTlGestureEvent(gesture: "tripletap");
+        await PluginTealeaf.onTlGestureEvent(gesture: "tripletap", id: '/xxx/Text', target: 'Text');
         result = 'ok';
       } on Exception catch (e) {
         if (kDebugMode) print(e);
@@ -493,7 +493,7 @@ void main() {
     test('onGestureTlEvent bad parameter test', () async {
       String result;
       try {
-        await PluginTealeaf.onTlGestureEvent(gesture: "_bad_");
+        await PluginTealeaf.onTlGestureEvent(gesture: "_bad_", id: 'someId', target: 'widgetName');
         result = 'ok';
       } on Exception catch (e) {
         if (kDebugMode) print(e);

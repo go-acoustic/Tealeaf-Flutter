@@ -77,8 +77,8 @@ import java.text.SimpleDateFormat;
 // --- Start of (possibly some) code to be moved out.
 
 class ScreenUtil {
-  private final static boolean dumpFile  = true;
-  private final static boolean dumpImage = true;
+  private final static boolean dumpFile  = false;
+  private final static boolean dumpImage = false;
   private final static int imageItems    = 6;
 
   static byte[] obscureAndCompress(Bitmap bitmap, List<Position> maskedPositions) {

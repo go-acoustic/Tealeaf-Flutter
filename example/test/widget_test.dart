@@ -24,7 +24,7 @@ void main() {
 
           match = text.startsWith('Running on:');
           if (match) {
-            print('Widget text found: $text');
+            debugPrint('Widget text found: $text');
           }
         }
         return match;

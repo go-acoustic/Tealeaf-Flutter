@@ -695,7 +695,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
   final static String INVOKE_EXCEPTION = "502: Exception in request: ";
   final static boolean FLUTTER_GESTURE_EVENT = true;
 
-  private static final String VERSION = "0.4.7";
+  private static final String VERSION = "1.0.0";
   private Object firstPointerEvent = null;
   private Object lastPointerEvent = null;
   private Object lastPointerUpEvent = null;

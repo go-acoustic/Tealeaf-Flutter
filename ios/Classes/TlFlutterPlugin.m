@@ -9,7 +9,6 @@
     CGFloat   _scale;
     CGFloat   _adjustWidth;
     CGFloat   _adjustHeight;
-    NSString  *_version;
     NSString  *_imageFormat;
     NSString  *_lastHash;
     BOOL      _isJpgFormat;
@@ -36,7 +35,6 @@
     _screenWidth  = -1;
     _screenHeight = -1;
     _scale   = [UIScreen mainScreen].scale;
-    _version = @"0.4.6";
     _fromWeb = false;
     
     [self resetScreenLoadTime];
@@ -117,12 +115,6 @@
 
 - (NSMutableDictionary *) getBasicConfig {
     return _basicConfig;
-}
-
-- (NSString *) getVersionNumber {
-    //Below gets app version, not plugin version
-    //NSString * version = [[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleShortVersionString"];
-    return _version;
 }
 
 - (NSString *) getBuildNumber {
@@ -729,13 +721,6 @@
             NSString *platformVersion = [[UIDevice currentDevice] systemVersion];
             NSLog(@"Platform Version: %@", platformVersion);
             result([@"iOS " stringByAppendingString: platformVersion]);
-        }
-        else if ([@"getPluginVersion" caseInsensitiveCompare:call.method] == NSOrderedSame) {
-            NSString *pluginVersion = [self getVersionNumber];
-            if ([pluginVersion length] == 0) {
-                pluginVersion = @"x.x.x";
-            }
-            result(pluginVersion);
         }
         else if ([@"getTealeafVersion" caseInsensitiveCompare:call.method] == NSOrderedSame) {
             NSDictionary *dict = [self getAdvancedConfig];

@@ -818,7 +818,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
           break;
         }
         case "getpluginversion": {
-          result.success(TlFlutterPlugin.VERSION);
+          result.error("deprecated error", "getpluginversion no longer supported in native", getStackTraceAsString());
           break;
         }
         case "getappkey": {

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:yaml/yaml.dart';
 
 // ignore: unused_import
 import 'tealeaf_aop.dart';
@@ -69,10 +70,18 @@ class PluginTealeaf {
 
   static Future<String> get pluginVersion async {
     try {
-      return await _channel.invokeMethod('getPluginVersion');
+      final String versionKey = 'version';
+      final String pubspecData = await rootBundle.loadString('packages/tl_flutter_plugin/pubspec.yaml');
+      if (pubspecData.isNotEmpty) {
+        YamlMap pubspecYaml = loadYaml(pubspecData);
+        if (pubspecYaml.containsKey(versionKey)) {
+          return pubspecYaml[versionKey].split('+')[0];
+        }
+      }
+      return "";
     }
-    on PlatformException catch (pe) {
-      throw TealeafException(pe, msg: 'Unable to process Tealeaf Flutter request plugin version message!');
+    on Exception catch (e) {
+      throw TealeafException.create(code: 7, msg: 'Unable to obtain platform version: ${e.toString()}');
     }
   }
 

@@ -26,6 +26,7 @@ dependencies:
   crypto: ^3.0.1
   http: ^0.13.4
   logger: ^1.1.0
+  yaml: ^3.1.1
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +49,9 @@ flutter:
         pluginClass: TlFlutterPlugin
       ios:
         pluginClass: TlFlutterPlugin
+
+  assets:
+    - ./pubspec.yaml
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

@@ -70,7 +70,7 @@ class PluginTealeaf {
 
   static Future<String> get pluginVersion async {
     try {
-      final String versionKey = 'version';
+      const String versionKey = 'version';
       final String pubspecData = await rootBundle.loadString('packages/tl_flutter_plugin/pubspec.yaml');
       if (pubspecData.isNotEmpty) {
         YamlMap pubspecYaml = loadYaml(pubspecData);

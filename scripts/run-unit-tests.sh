@@ -7,7 +7,7 @@ mkdir -p test-results
 
 cd test/
 search_dir=$(pwd)
-for testFile in "$search_dir"/*
+for testFile in "$search_dir"/*.dart
 do
   if [[ $testFile != *"tealeaf.dart"* ]]; then
       echo "Running tests: $testFile"

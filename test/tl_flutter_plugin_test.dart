@@ -6,9 +6,11 @@ import 'dart:convert';
 
 void main() {
   const String platform = 'Arbitrary platform 47';
-  const String tealeaf = '10.3.119';
-  const String plugin = '0.0.1';
-  const String key = "valid key";
+  const String tealeaf = '10.3.274';
+  const String plugin = '1.0.0';
+  const String key = 'valid key';
+  const String sessionId = '012345678901234567890123456789ff';
+  const String globalConfigJsonString = '{"AppKey": "e753a61c93ab4620aab64648505a9647"}';
 
   List<Map<String, dynamic>> layoutParameters = [
     {
@@ -30,18 +32,16 @@ void main() {
 
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  void validateParameter(
-      String request, dynamic args, String arg, List<Type> types,
-      {String prefix = ''}) {
+  validateParameter(String request, dynamic args, String arg, List<Type> types, {String prefix = ''}) {
     final dynamic parameter = args[arg];
 
     if (parameter == null) {
-      throw Exception("Request $request missing parameter $arg");
+      throw Exception("Request $request missing parameter '$arg'");
     }
     Type type = parameter.runtimeType;
 
     // TBD: How to check if a Type is a subtype. " is " works,
-    // but only on actual compiile types, NOT type variables. There must
+    // but only on actual compile types, NOT type variables. There must
     // be a way to do this for all types, not just for Map (all that is needed for now)
     if (types.contains(Map) && parameter is Map) {
       const Type newType = Map;
@@ -51,7 +51,7 @@ void main() {
 
     if (!types.contains(type)) {
       throw Exception(
-          " Request $request parameter $prefix$arg, type $type not allowed");
+          " Request $request parameter '$prefix$arg', type '$type' not allowed");
     }
   }
 
@@ -64,6 +64,19 @@ void main() {
     validateParameter(request, points, 'dx', [double], prefix: prefix);
     validateParameter(request, points, 'dy', [double], prefix: prefix);
   }
+
+  void printTealeafException(Exception e) {
+    if (kDebugMode) {
+      if (e is TealeafException) {
+         final TealeafException te = e;
+         print("TealeafException: ${te.msg}, platform details: ${te.nativeMsg}, ${te.nativeDetails}");
+      }
+      else {
+        print(e.toString());
+      }
+    }
+  }
+
 
   setUp(() {
     channel.setMockMethodCallHandler((MethodCall methodCall) async {
@@ -85,12 +98,31 @@ void main() {
           return plugin;
         case "getappkey":
           return key;
+        case "gettealeafsessionid":
+          return sessionId;
+        case "getglobalconfiguration":
+          return globalConfigJsonString;
+        case "setenv": 
+          if (!args.containsKey('screenw')) {
+            throw Exception("tlSetEnvironment missing 'screenw' parameter");
+          }
+          if (!args.containsKey('screenh')) {
+            throw Exception("tlSetEnvironment missing 'screenh' parameter");
+          }
+          validateParameter(request, args, 'screenw', [int]);
+          validateParameter(request, args, 'screenh', [int]);
+          if (args['screenw'] <= 0) {
+            throw Exception("tlSetEnvironment invalid 'screenw' parameter: $args['screenw']");
+          }
+          if (args['screenh'] <= 0) {
+            throw Exception("tlSetEnvironment invalid 'screenh' parameter: $args['screenh']");
+          }
+          return null;
         case 'gesture':
           if (!args.containsKey('tlType')) {
             throw Exception("Missing gesture type!");
           }
-          if (!['swipe', 'taphold', 'tap', 'doubletap']
-              .contains(args['tlType'])) {
+          if (!['pinch', 'swipe', 'taphold', 'tap', 'doubletap'].contains(args['tlType'])) {
             throw Exception("Gesture type not supported: ${args['tlType']}");
           }
           return null;
@@ -119,46 +151,38 @@ void main() {
           }
 
           return null;
-        case 'connection':
-          {
+        case 'connection': {
             validateParameter(request, args, 'url', [String]);
-            validateParameter(request, args, 'statuscode', [int, String]);
-            validateParameter(request, args, 'responsesize', [int, String]);
-            validateParameter(request, args, 'inittime', [int, String]);
-            validateParameter(request, args, 'loadtime', [int, String]);
+            validateParameter(request, args, 'statusCode', [int, String]);
+            validateParameter(request, args, 'initTime', [int, String]);
+            validateParameter(request, args, 'loadTime', [int, String]);
 
             if (args.containsKey('responsesize')) {
-              validateParameter(request, args, 'responsesize', [int, String]);
+              validateParameter(request, args, 'responseSize', [int, String]);
             }
             return null;
-          }
-        case 'customevent':
-          {
+        }
+        case 'customevent': {
             validateParameter(request, args, 'eventname', [String]);
             if (args.containsKey('logLevel')) {
-              validateParameter(request, args, 'loglevel', [int]);
+              validateParameter(request, args, 'loglLevel', [int]);
             }
             if (args.containsKey('data')) {
               validateParameter(request, args, 'data', [Map]);
             }
             return null;
-          }
-        case 'exception':
-          {
-            validateParameter(request, args, 'data', [Map]);
-
-            final Map map = args['data'];
-            validateParameter(request, map, 'name', [String]);
-            validateParameter(request, map, 'message', [String]);
-            validateParameter(request, map, 'handled', [bool]);
-            validateParameter(request, map, 'stacktrace', [String]);
-            if (map.containsKey('appdata')) {
-              validateParameter(request, args, 'data', [Map]);
+        }
+        case 'exception': {
+            validateParameter(request, args, 'name', [String]);
+            validateParameter(request, args, 'message', [String]);
+            validateParameter(request, args, 'handled', [bool]);
+            validateParameter(request, args, 'stacktrace', [String]);
+            if (args.containsKey('appdata')) {
+              validateParameter(request, args, 'appdata', [Map]);
             }
             return null;
-          }
-        case 'screenview':
-          {
+        }
+        case 'screenview': {
             validateParameter(request, args, 'tlType', [String]);
             validateParameter(request, args, 'timeStamp', [String, int]);
 
@@ -169,7 +193,7 @@ void main() {
                   "Parameter tlType is not one of the supported tealeaf screen types: $type");
             }
             return null;
-          }
+        }
         default:
           throw Exception('No such method (in test)');
       }
@@ -213,7 +237,7 @@ void main() {
             screenWidth: 1440, screenHeight: 2880);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -229,14 +253,14 @@ void main() {
             data: {
               'pointer1': {'dx': 47.0, 'dy': 47.0},
               'pointer2': {'dx': 47.0, 'dy': 47.0},
-              'dx': const Offset(20, 0),
-              'dy': const Offset(20, 0),
+              'dx': 20,
+              'dy': 20,
               'direction': "open",
             });
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
-        result = 'fail';
+        printTealeafException(e);
+	result = 'fail';
       }
       expect(result, 'ok');
     });
@@ -252,14 +276,14 @@ void main() {
               'pointer1': {'dx': 47.0, 'dy': 47.0, 'ts': '217002223455'},
               'pointer2': {'dx': 47.0, 'dy': 47.0, 'ts': '217002223455'},
               'velocity': {
-                'dx': const Offset(20, 0),
-                'dy': const Offset(20, 0)
+                'dx': 20,
+                'dy': 20,
               },
               'direction': "right",
             });
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -275,7 +299,7 @@ void main() {
         );
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -291,7 +315,7 @@ void main() {
         );
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -307,13 +331,13 @@ void main() {
         );
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
     });
 
-    test('conection', () async {
+    test('connection', () async {
       String result;
       try {
         await PluginTealeaf.tlConnection(
@@ -324,7 +348,7 @@ void main() {
             loadTime: 114600);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -341,7 +365,7 @@ void main() {
             });
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -353,7 +377,7 @@ void main() {
         await PluginTealeaf.tlApplicationCaughtException(caughtException: null);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'fail');
@@ -368,7 +392,7 @@ void main() {
             appData: {"msg": "My error message", "where": "in my main.dart"});
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -376,17 +400,21 @@ void main() {
 
     test('onTlException', () async {
       String result;
+      Exception e = Exception("This is an exception");
       Map<dynamic, dynamic> mapData = {
-        "nativecode": "1",
-        "nativemessage": Exception("This is an exception").toString(),
-        "nativestacktrace": StackTrace.current.toString(),
-        "message": "This is a message"
+        "nativecode": "501",
+        "nativemessage": "Native error message",
+        "nativestacktrace": "[method1]\n[method2]\n",
+        "name": e.runtimeType.toString(),
+        "stacktrace": StackTrace.current.toString(),
+        "message": e.toString(),
+        "handled": true
       };
       try {
         await PluginTealeaf.onTlException(data: mapData);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -399,7 +427,7 @@ void main() {
             "LOAD", const Duration(seconds: 2), layoutParameters);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -412,7 +440,7 @@ void main() {
             "UNLOAD", const Duration(seconds: 2), layoutParameters);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -425,7 +453,7 @@ void main() {
             "VISIT", const Duration(seconds: 2), layoutParameters);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'ok');
@@ -456,12 +484,16 @@ void main() {
     test('getGlobalConfiguration', () async {
       bool result;
       try {
-        String response = await PluginTealeaf.getGlobalConfiguration();
-        if (json.decode(response) is Map) {
-          result = true;
+        final String response = await PluginTealeaf.getGlobalConfiguration();
+        final dynamic map = json.decode(response);
+        if (map is Map) {
+          result = map.containsKey('AppKey');
+        }
+        else {
+          debugPrint("getGlobalConfiguration 'AppKey' not found!");
         }
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = false;
       }
       expect(result, true);
@@ -474,33 +506,36 @@ void main() {
         await PluginTealeaf.onTlGestureEvent(gesture: "tripletap", id: '/xxx/Text', target: 'Text');
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'fail');
     });
+
     test('noMethodTest', () async {
       String result;
       try {
         await PluginTealeaf.badCall();
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'fail');
     });
+
     test('onGestureTlEvent bad parameter test', () async {
       String result;
       try {
         await PluginTealeaf.onTlGestureEvent(gesture: "_bad_", id: 'someId', target: 'widgetName');
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'fail');
     });
+
     test('onTlPointerEvent missing PointerEvent fields test', () async {
       String result;
       final dynamic ptrFields = {
@@ -511,17 +546,18 @@ void main() {
         'buttons': 0,
         'embeddedId': 0,
         'pressure': 0.47,
-        'timeSTAMP??': const Duration(microseconds: 47).inMicroseconds,
+        'timestemp': DateTime.now().millisecondsSinceEpoch,
       };
       try {
         await PluginTealeaf.onTlPointerEvent(fields: ptrFields);
         result = 'ok';
       } on Exception catch (e) {
-        if (kDebugMode) print(e);
+        printTealeafException(e);
         result = 'fail';
       }
       expect(result, 'fail');
     });
+
     // Verify that Aspectd AOP is working.
     test('AspectD injection validation test', () {
       expect(PluginTealeaf.aspectdTest(), true);

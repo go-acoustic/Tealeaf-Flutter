@@ -3,7 +3,7 @@ description: Demonstrates how to use the tl_flutter_plugin plugin.
 version: 1.0.0
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 build-number: 1.0.0
 
 environment:
@@ -24,12 +24,12 @@ dependencies:
     #   tl_flutter_plugin: ^x.y.z
     # or
     #   tl_flutter_plugin:
-    #     git: https://github.com/aipoweredmarketer/TL-Flutter-Plugin.git
+    #     git: https://github.com/acoustic-analytics/acoustic_tealeaf.git
     # See https://dart.dev/tools/pub/dependencies#version-constraints
     # The example app is bundled with the plugin so we use a path dependency on
-    # the parent directory to specify the current plugin's version.
+    # the parent directory to specify the current plugin's version. Applications
+    # should use either the pub.dev repo or the Acustic GitHub repo as shown above.
     path: ../
-    # git: https://github.com/aipoweredmarketer/TL-Flutter-Plugin.git
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -46,14 +46,13 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^1.0.0
+  lints: ^2.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

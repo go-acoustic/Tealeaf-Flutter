@@ -1,5 +1,3 @@
-// @dart=2.8
-
 // ignore: unused_import
 import '../tealeaf_aop.dart';
 // ignore: unused_import

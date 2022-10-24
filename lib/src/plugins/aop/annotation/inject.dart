@@ -1,4 +1,4 @@
-// @dart=2.8
+// @dart=2.12
 
 import 'annotation_info.dart';
 
@@ -8,11 +8,11 @@ import 'annotation_info.dart';
 class Inject extends AnnotationInfo {
   /// Inject grammar default constructor.
   const factory Inject(String importUri, String clsName, String methodName,
-      {int lineNum, bool isRegex}) = Inject._;
+      {required int lineNum, required bool isRegex}) = Inject._;
 
   @pragma('vm:entry-point')
   const Inject._(String importUri, String clsName, String methodName,
-      {int lineNum, bool isRegex})
+      {required int lineNum, required bool isRegex})
       : super(
             importUri: importUri,
             clsName: clsName,

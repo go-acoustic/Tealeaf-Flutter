@@ -19,13 +19,11 @@ void main() {
     expect(
       find.byWidgetPredicate((Widget widget) {
         bool match = false;
-        if (widget != null && widget is Text) {
-          final String text = widget.data;
+        if (widget is Text) {
+          final String text = widget.data?? '<null text>';
 
           match = text.startsWith('Running on:');
-          if (match) {
-            debugPrint('Widget text found: $text');
-          }
+          debugPrint('Platform version Widget text: $text, found: $match');
         }
         return match;
       }

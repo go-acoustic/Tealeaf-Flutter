@@ -1,1 +1,1 @@
-`dart --snapshot=./starter.snapshot ../../inner/tool/starter.dart`
+`dart --snapshot=./starter.snapshot ../../tealeaf_aop/tool/starter.dart`

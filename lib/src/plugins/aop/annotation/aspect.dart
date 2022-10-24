@@ -1,3 +1,4 @@
+// @dart=2.12
 /// Annotation indicating whether a class should be taken into consideration
 /// when searching for aspectd implementations like AOP.
 @pragma('vm:entry-point')

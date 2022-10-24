@@ -24,7 +24,6 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-import io.flutter.view.FlutterView;
 
 import org.json.JSONObject;
 
@@ -115,9 +114,10 @@ class ScreenUtil {
 
     view.setDrawingCacheEnabled(true);
 
-    if (renderer.getClass() == FlutterView.class) {
-      bitmap = ((FlutterView) renderer).getBitmap();
-    } else if (renderer.getClass() == FlutterRenderer.class) {
+    //if (renderer.getClass() == FlutterView.class) {
+    //  bitmap = ((FlutterView) renderer).getBitmap();
+    //} else
+    if (renderer.getClass() == FlutterRenderer.class) {
       bitmap = ((FlutterRenderer) renderer).getBitmap();
     }
 
@@ -212,6 +212,7 @@ class ScreenUtil {
     final Position position = new Position();
 
     if (positionObject instanceof Map) {
+      @SuppressWarnings("unchecked")
       final Map<String, String> widgetPosition = (Map<String, String>) positionObject;
       final int x = Math.round(getAsFloat(widgetPosition.get("x")) * pixelDensity);
       final int y = Math.round(getAsFloat(widgetPosition.get("y")) * pixelDensity);
@@ -240,7 +241,13 @@ class ScreenUtil {
 
   static HashMap<String, Object> getCurrentState(HashMap<String, Object> wLayout) {
     final Object currStateObject = wLayout.get("currState");
-    return (currStateObject instanceof Map) ? (HashMap<String, Object>) currStateObject : null;
+
+    if (currStateObject instanceof Map) {
+      @SuppressWarnings("unchecked")
+      HashMap<String, Object> state = (HashMap<String, Object>) currStateObject;
+      return state;
+    }
+    return null;
   }
 
   static Position scalePosition(Position position, float scaleW, float scaleH) {
@@ -303,6 +310,7 @@ class ScreenUtil {
       final Object styleObject = wLayout.get("style");
 
       if (styleObject instanceof Map) {
+        @SuppressWarnings("unchecked")
         final HashMap<String, String> styleMap = (HashMap<String, String>) styleObject;
 
         if (tlType.contentEquals("image")) {
@@ -348,6 +356,7 @@ class ScreenUtil {
         Image image;
 
         if (EOCore.getConfigItemBoolean("GetImageDataOnScreenLayout", TealeafEOLifecycleObject.getInstance())) {
+          @SuppressWarnings("unchecked")
           final Map<String, Object> imageMap = (HashMap<String, Object>) imageObject;
           if (imageMap.size() != imageItems) {
             TlFlutterPlugin.LOGGER.log(Level.INFO, "*#* # of image components incorrect: " + imageMap.size());
@@ -515,8 +524,8 @@ class GestureUtil {
     if (rootView != null) {
       final CopyOnWriteArrayList<View> possibleXYViews = new CopyOnWriteArrayList<>();
 
-      final PropertyName initialXPath = getPropertyName(rootView, null, 0, false, getInitialZIndex());
-      printLayoutData("Parent id:", rootView, initialXPath.getId(), 0, initialXPath, getInitialZIndex());
+      final PropertyName initialXPath = getPropertyName(rootView, null, 0, getInitialZIndex());
+      printLayoutData(rootView, initialXPath.getId(), 0, initialXPath, getInitialZIndex());
       xpath = initialXPath.getXPath();
 
       if (rootView instanceof ViewGroup) {
@@ -526,7 +535,7 @@ class GestureUtil {
           possibleXYViews.clear();
         }
       }
-      propertyName = getPropertyName(result, xpath, 0, false, getInitialZIndex());
+      propertyName = getPropertyName(result, xpath, 0, getInitialZIndex());
     } else {
       propertyName = new PropertyName(xpath, IdType.XPATH, xpath, getInitialZIndex());
     }
@@ -546,7 +555,7 @@ class GestureUtil {
 
         for (int i = 0; i < viewGroup.getChildCount(); ++i) {
           View child = viewGroup.getChildAt(i);
-          finalXPath = printLayoutData("id:", child, xpath, i, null, getInitialZIndex());
+          finalXPath = printLayoutData(child, xpath, i, null, getInitialZIndex());
           testViewXY(child, x, y, possibleXYViews);
           finalXPath = getViewByXYHelper(child, x, y, finalXPath, possibleXYViews);
         }
@@ -590,8 +599,8 @@ class GestureUtil {
     return position;
   }
 
-  static String printLayoutData(String message, View view, String xpath, int index, PropertyName propertyName, int zIndex) {
-    final PropertyName id = propertyName == null ? getPropertyName(view, xpath, index, false, zIndex) : propertyName;
+  static String printLayoutData(View view, String xpath, int index, PropertyName propertyName, int zIndex) {
+    final PropertyName id = propertyName == null ? getPropertyName(view, xpath, index, zIndex) : propertyName;
 
     return id.getXPath();
   }
@@ -601,10 +610,10 @@ class GestureUtil {
     return zindex <= 0 ? 500 : zindex;
   }
 
-  static PropertyName getPropertyName(View view, String xpath, int index, Boolean walkUpTree, int zIndex) {
+  static PropertyName getPropertyName(View view, String xpath, int index, int zIndex) {
     final PropertyName propertyName = new PropertyName("-1", IdType.DYNAMICID, xpath, zIndex);
     try {
-      propertyName.setId(getXPath(view, xpath, index, walkUpTree));
+      propertyName.setId(getXPath(view, xpath, index));
       propertyName.setIdType(IdType.XPATH);
       propertyName.setXPath(propertyName.getId());
     } catch (Exception e) {
@@ -617,57 +626,20 @@ class GestureUtil {
     }
 
     if (!IdType.XPATH.equals(propertyName.getIdType())) {
-      propertyName.setXPath(getXPath(view, xpath, index, walkUpTree));
+      propertyName.setXPath(getXPath(view, xpath, index));
     }
 
     return propertyName;
   }
 
-  static String getXPath(View view, String xpath, int index, boolean walkUpTree) {
+  static String getXPath(View view, String xpath, int index) {
     final StringBuilder sb = new StringBuilder();
-
-    if (walkUpTree) {
-      sb.append(getXPathFromChild(view));
-    }
 
     if (xpath != null) {
       sb.append(xpath);
     }
 
     return sb.append("[").append(getClassNameUpperCase(view)).append(",").append(index).append("]").toString();
-  }
-
-  static String getXPathFromChild(View view) {
-    View walkUpView = view;
-    final StringBuilder sb = new StringBuilder();
-
-    while (walkUpView != null) {
-      StringBuilder xpathNode = new StringBuilder("[" + getClassNameUpperCase(walkUpView) + ",");
-      int index = 0;
-      if (walkUpView.getParent() != null && walkUpView.getParent() instanceof ViewGroup) {
-        ViewGroup viewGroup = (ViewGroup)walkUpView.getParent();
-        index = viewGroup.indexOfChild(walkUpView);
-      }
-
-      xpathNode.append(index).append("]");
-      sb.insert(0, xpathNode);
-      Object parentView;
-
-      for(;;) {
-        parentView = walkUpView.getParent();
-        if (parentView instanceof View) {
-          walkUpView = (View)parentView;
-          break;
-        }
-
-        if (parentView == null || parentView.getClass().getName().contains("ViewRoot")) {
-          walkUpView = null;
-          break;
-        }
-      }
-    }
-
-    return sb.toString();
   }
 
   static String getClassNameUpperCase(Object object) {
@@ -695,8 +667,6 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
   final static String INVOKE_EXCEPTION = "502: Exception in request: ";
   final static boolean FLUTTER_GESTURE_EVENT = true;
 
-  private static final String VERSION = "1.0.0";
-  private Object firstPointerEvent = null;
   private Object lastPointerEvent = null;
   private Object lastPointerUpEvent = null;
   private long lastDown = -1L;
@@ -715,6 +685,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
   private Object renderer;
   ActivityPluginBinding activityBinding;
 
+  @SuppressWarnings("deprecation")
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
     channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "tl_flutter_plugin");
@@ -738,6 +709,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     });
     // TeaCuts (AspectJ) needs to have override methods to add hooks to it.
 
+    // This is a 'blocked' issue according to flutter developers
     renderer = flutterPluginBinding.getFlutterEngine().getRenderer();
 
     // Enable Tealeaf library
@@ -993,7 +965,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
           Tealeaf.getGesturePlaceHolder().take(); // Remove placeholder (not needed?)
         }
         logGestureEvent(activity, tlType, args, EOCore.getDefaultLogLevel());
-        lastPointerEvent = firstPointerEvent = null;
+        lastPointerEvent = null;
       }
       else {
         Tealeaf.logGestureEvent(activity, motionEvent(), tlType, this.lastPage);
@@ -1008,10 +980,6 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
       final MotionEvent motionEvent = motionEvent(args);
       final int action = motionEvent.getAction();
-
-      if (action == MotionEvent.ACTION_DOWN) {
-        firstPointerEvent = args;
-      }
 
       if (action == MotionEvent.ACTION_UP) {
         lastPointerUpEvent = args;
@@ -1171,11 +1139,12 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
       return null;
     }
     if (map instanceof Map) {
-      return (T) ((Map<?, ?>) map).get(key);
-
+      @SuppressWarnings("unchecked") T parameterMap = (T) ((Map<?, ?>) map).get(key);
+      return parameterMap;
     }
     if (map instanceof JSONObject) {
-      return (T) ((JSONObject) map).opt(key);
+      @SuppressWarnings("unchecked") T jsonMap = (T) ((JSONObject) map).opt(key);
+      return jsonMap;
     }
     throw new ClassCastException();
   }
@@ -1271,7 +1240,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
     MotionEvent motionEvent1;
     MotionEvent motionEvent2 = null;
-    GesturePlaceHolder gph = null;
+    //GesturePlaceHolder gph = null;
 
     if (isPinch || isSwipe) {
       final double dx = checkForParameter(data, "pointer1", "dx");
@@ -1299,10 +1268,10 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
               the placeholder (gph) and the actual gesture requires access to
               the cache temp buffer (in TLFCache.java) which is protected or private.
       */
-      if (Tealeaf.getGesturePlaceHolder().size() > 0) {
-        gph = Tealeaf.getGesturePlaceHolder().take();
+      //if (Tealeaf.getGesturePlaceHolder().size() > 0) {
+        // gph = Tealeaf.getGesturePlaceHolder().take();
         // Just remove from queue for now.
-      }
+      //}
       gesture.setLogLevel(logLevel);
 
       final EventInfo eventInfo = new EventInfo();
@@ -1398,11 +1367,6 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     finally {
       TLFCache.addMessage(gesture);
       TLFCache.flush(true);
-      /*
-      if (EOCore.getConfigItemBoolean("FlushUpdatedPlaceHolders", TealeafEOLifecycleObject.getInstance()))
-      TLFCache.delayFlush(Tealeaf.getCurrentSessionId());
-      TLFCache.updateGesture(gesture, gph);
-      */
     }
   }
 }

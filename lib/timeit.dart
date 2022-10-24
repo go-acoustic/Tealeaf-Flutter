@@ -10,7 +10,7 @@ class TimeIt {
 
   TimeIt({this.label = "Timed function: "});
 
-  dynamic execute(Function function, {String label}) {
+  dynamic execute(Function function, {String? label}) {
     final DateTime start = DateTime.now();
     final String prefix = label?? this.label;
     final dynamic result = function();

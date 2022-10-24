@@ -12,8 +12,8 @@ import 'package:tl_flutter_plugin/timeit.dart';
 import 'package:tl_flutter_plugin/tl_flutter_plugin.dart';
 import 'package:tl_flutter_plugin/logger.dart';
 
-class _WidgetPath {
-  _WidgetPath();
+class WidgetPath {
+  WidgetPath();
 
   static const String excl = r'^(Focus|Semantics|.*<.*>|InheritedElement|_|.*\n_).*$';
   static const String reduce = r"[a-z]";
@@ -22,18 +22,18 @@ class _WidgetPath {
 
   static Map<int, dynamic> widgetContexts = {};
 
-  BuildContext context;
-  Element parent;
-  String  parentWidgetType;
-  String  path;
-  String  pathHash;
-  bool    shorten;
-  bool    hash;
-  int     key;
+  BuildContext? context;
+  Element?  parent;
+  String?   parentWidgetType;
+  String?   pathHash;
+  int?      key;
+  late bool shorten;
+  late bool hash;
+  late String path;
 
-  Map<String, dynamic> parameters;
+  Map<String, dynamic>? parameters;
 
-  _WidgetPath.create(this.context, {this.shorten = true, this.hash = false, String exclude = excl}) {
+  WidgetPath.create(this.context, {this.shorten = true, this.hash = false, String exclude = excl}) {
     if (context == null) {
       return;
     }
@@ -41,9 +41,11 @@ class _WidgetPath {
     final StringBuffer path = StringBuffer();
     final RegExp re = RegExp(exclude, multiLine: true);
     final List<String> stk = [];
-    final Widget widget = context.widget;
+    Widget? widget = context?.widget;
 
-    context.visitAncestorElements((ancestor) {
+    this.path = '';
+
+    context?.visitAncestorElements((ancestor) {
       final String wrt = ancestor.widget.runtimeType.toString();
       final String rt = ancestor.runtimeType.toString();
       final String rts = '$rt\n$wrt';
@@ -67,10 +69,10 @@ class _WidgetPath {
     this.path = makeShorter(path.toString()) + widgetName;
 
     try {
-      final dynamic parentWidget = parent.widget;
+      final dynamic parentWidget = parent?.widget;
       final List<Widget> children = parentWidget.children;
       tlLogger.v("Widget has siblings, checking for parent list position");
-      final int position = children.indexOf(widget);
+      final int position = children.indexOf(widget!);
       this.path += '/$position';
       parentWidgetType = parentWidget.runtimeType.toString();
     }
@@ -85,11 +87,11 @@ class _WidgetPath {
     tlLogger.v('@@@ WIDGET: ${widget.runtimeType.toString()}, path: $widgetPath, digest: $widgetDigest');
   }
 
-  int findExistingPathKey() {
-    int match;
+  int? findExistingPathKey() {
+    int? match;
 
     for (MapEntry<int, dynamic> entry in widgetContexts.entries) {
-      final _WidgetPath wp = entry.value;
+      final WidgetPath wp = entry.value;
       if (this == wp) {
         tlLogger.v("Skip removing current widget path entry");
         continue;
@@ -103,7 +105,7 @@ class _WidgetPath {
     return match;
   }
 
-  bool isEqual(_WidgetPath other) {
+  bool isEqual(WidgetPath other) {
     final bool equal = path.compareTo(other.path) == 0;
     if (equal) {
       tlLogger.v("Widget paths are equal!");
@@ -112,7 +114,7 @@ class _WidgetPath {
   }
 
   void addInstance(int key) {
-    final int existingKey = findExistingPathKey();
+    final int? existingKey = findExistingPathKey();
     removePath(existingKey);
     if (existingKey != null) {
       tlLogger.v('Removing key $existingKey from widgetContext cache');
@@ -123,15 +125,15 @@ class _WidgetPath {
 
   set setParameters(Map<String, dynamic> parameters) => this.parameters = parameters;
 
-  static _WidgetPath   getPath(int key) => widgetContexts[key];
-  static void          removePath(int key) { if (key != null) widgetContexts.remove(key); }
+  static WidgetPath?  getPath(int key) => widgetContexts[key];
+  static void          removePath(int? key) { if (key != null) widgetContexts.remove(key); }
   static bool          containsKey(int key) => widgetContexts.containsKey(key);
   static void          clear() => widgetContexts.clear();
   static int           get size => widgetContexts.length;
   static Function      removeWhere = widgetContexts.removeWhere;
   static List<dynamic> valueList = widgetContexts.values.toList(growable: false);
   String               get widgetPath => path;
-  String               get widgetDigest => pathHash;
+  String?              get widgetDigest => pathHash;
   String               makeShorter(String str) => shorten ? str.replaceAll(RegExp(reduce), '') : str;
 }
 
@@ -144,11 +146,11 @@ class _TlConfiguration {
     _dataLoader ??= PluginTealeaf.getGlobalConfiguration;
   }
 
-  static _Loader _dataLoader;
-  static Map<String, dynamic> _configureInformation;
-  static _TlConfiguration _instance;
+  static _Loader? _dataLoader;
+  static Map<String, dynamic>? _configureInformation;
+  static _TlConfiguration? _instance;
 
-  Future<void> load([_Loader loader]) async {
+  Future<void> load([dynamic loader]) async {
     if (loader != null) {
       _dataLoader = loader;
       _configureInformation = null;
@@ -157,7 +159,7 @@ class _TlConfiguration {
       if (_dataLoader == null) {
         throw Exception("No data loader injected for configuration!");
       }
-      final String data = await _dataLoader();
+      final String data = await _dataLoader!();
       _configureInformation = jsonDecode(data);
     }
   }
@@ -167,7 +169,7 @@ class _TlConfiguration {
 
     dynamic value = _configureInformation;
 
-    if (item != null && item.isNotEmpty) {
+    if (item.isNotEmpty) {
       final List<String> ids = item.split('/');
       final int idsLength = ids.length;
 
@@ -198,53 +200,49 @@ class _TlBinder extends WidgetsBindingObserver {
   static const bool createRootLayout = false;
   static const bool usePostFrame = false;
   static const int  rapidFrameRateLimitMs = 160;
-  static const int  rapidSequenceCompleteMs = rapidFrameRateLimitMs * 3;
+  static const int  rapidSequenceCompleteMs = rapidFrameRateLimitMs * 2;
 
-  static _TlBinder _instance;
-  static List<Map<String,dynamic>> layoutParametersForGestures;
+  static _TlBinder? _instance;
+  static List<Map<String,dynamic>>? layoutParametersForGestures;
 
   bool   initEnvironment = true;
   String frameHash = "";
-  int    screenWidth;
-  int    screenHeight;
+  int    screenWidth = 0;
+  int    screenHeight = 0;
   int    lastFrameTime = 0;
   bool   loggingScreen = false;
-  Timer  logFrameTimer;
+  Timer? logFrameTimer;
 
-  bool   maskingEnabled; // Do not initialize (allows one shot initialize)
-  List<dynamic> maskIds;
-  List<dynamic> maskValuePatterns;
+  bool?  maskingEnabled;
+  List<dynamic>? maskIds;
+  List<dynamic>? maskValuePatterns;
 
   void init() {
     final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
-    if (binding != null) {
-      binding.addPersistentFrameCallback((timestamp) {
-        if (usePostFrame) {
-          tlLogger.v("#### Frame handling with single PostFrame callbacks");
-          handleWithPostFrameCallback(binding, timestamp);
-        }
-        else {
-          tlLogger.v("#### Frame handling with direct persistent callbacks");
-          handleScreenUpdate(timestamp);
-        }
-      });
-      binding.addObserver(this);
-    }
+    binding.addPersistentFrameCallback((timestamp) {
+      if (usePostFrame) {
+        tlLogger.v("#### Frame handling with single PostFrame callbacks");
+        handleWithPostFrameCallback(binding, timestamp);
+      }
+      else {
+        tlLogger.v("#### Frame handling with direct persistent callbacks");
+        handleScreenUpdate(timestamp);
+      }
+    });
+    binding.addObserver(this);
   }
 
   void release() {
     final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
-    if (binding != null) {
-      binding.removeObserver(this);
-      _WidgetPath.clear();
-    }
+    binding.removeObserver(this);
+    WidgetPath.clear();
   }
 
-  Future<bool> getMaskingEnabled() async {
+  Future<bool?> getMaskingEnabled() async {
     if (maskingEnabled == null) {
-      maskingEnabled = await _TlConfiguration().get("GlobalScreenSettings/Masking/HasMasking");
+      maskingEnabled = await _TlConfiguration().get("GlobalScreenSettings/Masking/HasMasking")?? false;
       maskIds = await _TlConfiguration().get("GlobalScreenSettings/Masking/MaskIdList") ?? [];
       maskValuePatterns = await _TlConfiguration().get("GlobalScreenSettings/Masking/MaskValueList") ?? [];
     }
@@ -252,10 +250,10 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   void logFrameIfChanged(WidgetsBinding binding, Duration timestamp) async {
-    final Element rootViewElement = binding.renderViewElement;
+    final Element? rootViewElement = binding.renderViewElement;
 
     if (initEnvironment) {
-      final RenderObject rootObject = rootViewElement?.findRenderObject();
+      final RenderObject? rootObject = rootViewElement?.findRenderObject();
 
       if (rootObject != null) {
         screenWidth  = rootObject.paintBounds.width.round();
@@ -266,21 +264,23 @@ class _TlBinder extends WidgetsBindingObserver {
 
           await PluginTealeaf.tlSetEnvironment(screenWidth: screenWidth, screenHeight: screenHeight);
 
-          tlLogger.v('TlBinder, renderview w: $screenWidth, h: $screenHeight');
+          tlLogger.v('TlBinder, renderView w: $screenWidth, h: $screenHeight');
         }
       }
     }
 
     final int currentTime = DateTime.now().millisecondsSinceEpoch;
     final int elapsed = currentTime - lastFrameTime;
+    bool skippingFrame = false;
 
-    if (logFrameTimer != null && logFrameTimer.isActive) {
+    if (logFrameTimer != null && logFrameTimer!.isActive) {
       tlLogger.v('Cancelling screenview logging, frame interval: $elapsed');
-      logFrameTimer.cancel();
+      logFrameTimer!.cancel();
       logFrameTimer = null;
+      skippingFrame = loggingScreen;
     }
     else {
-      tlLogger.v('Logging screenview with no pending frame, frame interval: $elapsed');
+      tlLogger.v('Logging screenview with no pending frame, frame interval: $elapsed, logging now: $loggingScreen');
     }
     final int waitTime = (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
 
@@ -301,7 +301,7 @@ class _TlBinder extends WidgetsBindingObserver {
       tlLogger.v('Logging first frame');
       performScreenview();
     }
-    else if (loggingScreen) {
+    else if (skippingFrame) {
       tlLogger.v('Logging screenview in process, skipping frame');
     }
     else {
@@ -316,13 +316,11 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   void handleScreenUpdate(Duration timestamp) {
-    tlLogger.v('##### Frame callback @$timestamp (widget path map size: ${_WidgetPath.size})');
+    tlLogger.v('##### Frame callback @$timestamp (widget path map size: ${WidgetPath.size})');
 
     final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
-    if (binding != null) {
-      logFrameIfChanged(binding, timestamp);
-    }
+    logFrameIfChanged(binding, timestamp);
   }
 
   @override
@@ -342,12 +340,13 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   Future<String> maskText(String text) async {
-    if (await getMaskingEnabled()) {
+    final bool? maskingEnabled = await getMaskingEnabled();
+    if (maskingEnabled!) {
       if ((await _TlConfiguration().get("GlobalScreenSettings/Masking/HasCustomMask") ?? "").toString().contains("true")) {
-        final String smallCase = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/smallCaseAlphabet");
-        final String capitalCase = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/capitalCaseAlphabet");
-        final String symbol = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/symbol");
-        final String number = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/number");
+        final String? smallCase = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/smallCaseAlphabet");
+        final String? capitalCase = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/capitalCaseAlphabet");
+        final String? symbol = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/symbol");
+        final String? number = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/number");
 
         if (smallCase != null) {
           text = text.replaceAll(RegExp(r"\p{Ll}", unicode: true), smallCase);
@@ -399,7 +398,7 @@ class _TlBinder extends WidgetsBindingObserver {
 
   Future<List<Map<String, dynamic>>> getAllLayouts() async {
     final List<Map<String, dynamic>> layouts = [];
-    final List<dynamic> pathList = _WidgetPath.valueList;
+    final List<dynamic> pathList = WidgetPath.valueList;
 
     bool hasGestures = false;
 
@@ -408,14 +407,14 @@ class _TlBinder extends WidgetsBindingObserver {
     }
 
     for (dynamic widgetPath in pathList) {
-      final _WidgetPath wp = widgetPath as _WidgetPath;
-      final Map <String, dynamic> args = wp.parameters;
+      final WidgetPath wp = widgetPath as WidgetPath;
+      final Map <String, dynamic>? args = wp.parameters;
 
       if (args != null) {
-        final String type = args['type'];
-        final String subType = args['subType'];
-        final BuildContext context = wp.context;
-        final Widget widget = context?.widget;
+        final String? type = args['type'];
+        final String? subType = args['subType'];
+        final BuildContext? context = wp.context;
+        final Widget? widget = context?.widget;
 
         if (type != null && type.compareTo("GestureDetector") == 0) {
           hasGestures = true;
@@ -423,12 +422,13 @@ class _TlBinder extends WidgetsBindingObserver {
         else if (subType != null && widget != null) {
           final String path = wp.widgetPath;
           final dynamic getData = args['data'];
-          Map<String, dynamic> aStyle;
-          Map<String, dynamic> font;
-          Map<String, dynamic> image;
-          String text;
+          Map<String, dynamic>? aStyle;
+          Map<String, dynamic>? font;
+          Map<String, dynamic>? image;
+          String? text;
+          bool?  maskingEnabled = await getMaskingEnabled();
 
-          bool masked = await getMaskingEnabled() && (maskIds.contains(wp.widgetPath) || maskIds.contains(wp.widgetDigest));
+          bool masked = maskingEnabled! && (maskIds!.contains(wp.widgetPath) || maskIds!.contains(wp.widgetDigest));
 
           if (subType.compareTo("ImageView") == 0) {
             image = await getData(widget);
@@ -441,12 +441,12 @@ class _TlBinder extends WidgetsBindingObserver {
           else if (subType.compareTo("TextView") == 0) {
             text = getData(widget);
 
-            final TextStyle style = args['style'];
-            final TextAlign align = args['align'];
+            final TextStyle style = args['style']?? TextStyle();
+            final TextAlign align = args['align']?? TextAlign.left;
 
-            if (await getMaskingEnabled() && !masked) {
-              for (final String pattern in maskValuePatterns) {
-                if (text.contains(RegExp(pattern))) {
+            if (maskingEnabled && !masked && maskValuePatterns != null) {
+              for (final String pattern in maskValuePatterns!) {
+                if (text!.contains(RegExp(pattern))) {
                   masked = true;
                   tlLogger.v('Masking matched content with RE: $pattern, text: $text');
                   break;
@@ -455,7 +455,7 @@ class _TlBinder extends WidgetsBindingObserver {
             }
             if (masked) {
               try {
-                text = await maskText(text);
+                text = await maskText(text!);
               }
               on TealeafException catch (te) {
                 tlLogger.v('Unable to mask text. ${te.getMsg}');
@@ -471,16 +471,16 @@ class _TlBinder extends WidgetsBindingObserver {
             font = {
               'family': style.fontFamily,
               'size': style.fontSize.toString(),
-              'bold': (FontWeight.values.indexOf(style.fontWeight) > FontWeight.values.indexOf(FontWeight.normal)).toString(),
+              'bold': (FontWeight.values.indexOf(style.fontWeight!) > FontWeight.values.indexOf(FontWeight.normal)).toString(),
               'italic': (style.fontStyle == FontStyle.italic).toString()
             };
 
             double top = 0, bottom = 0, left = 0, right = 0;
 
-            if (wp.parent.widget is Padding) {
-              final Padding padding = wp.parent.widget;
-              if (padding is EdgeInsets) {
-                final EdgeInsets eig = padding.padding;
+            if (wp.parent!.widget is Padding) {
+              final Padding padding = wp.parent!.widget as Padding;
+              if (padding.padding is EdgeInsets) {
+                final EdgeInsets eig = padding.padding as EdgeInsets;
                 top = eig.top;
                 bottom = eig.bottom;
                 left = eig.left;
@@ -489,22 +489,22 @@ class _TlBinder extends WidgetsBindingObserver {
             }
 
             aStyle = {
-              'textColor': (style.color.value & 0xFFFFFF).toString(),
-              'textAlphaColor': (style.color.alpha ?? 0).toString(),
+              'textColor': (style.color!.value & 0xFFFFFF).toString(),
+              'textAlphaColor': (style.color?.alpha ?? 0).toString(),
               'textAlphaBGColor': (style.backgroundColor?.alpha ?? 0).toString(),
-              'textAlign': align == null ? "left" : align.toString().split('.').last,
+              'textAlign': align.toString().split('.').last,
               'paddingBottom': bottom.toInt().toString(),
               'paddingTop': top.toInt().toString(),
               'paddingLeft': left.toInt().toString(),
               'paddingRight': right.toInt().toString(),
-              'hidden': (style.color.opacity == 1.0).toString(),
+              'hidden': (style.color!.opacity == 1.0).toString(),
               'colorPrimary': (style.foreground?.color ?? 0).toString(),
               'colorPrimaryDark': 0.toString(), // TBD: Dark theme??
               'colorAccent': (style.decorationColor?.value ?? 0).toString(), // TBD: are this the same??
             };
           }
 
-          final RenderBox box = context.findRenderObject() as RenderBox;
+          final RenderBox box = context!.findRenderObject() as RenderBox;
           final Offset position = box.localToGlobal(Offset.zero);
 
           if (image != null) {
@@ -516,7 +516,7 @@ class _TlBinder extends WidgetsBindingObserver {
             'id': path,
             'cssId': wp.widgetDigest,
             'idType': (-4).toString(),
-            'tlType': (image != null) ? 'image' : (text.contains('\n') ? 'textArea' : 'label'),
+            'tlType': (image != null) ? 'image' : (text!.contains('\n') ? 'textArea' : 'label'),
             'type': type,
             'subType': subType,
             'position': <String, String>{
@@ -542,25 +542,25 @@ class _TlBinder extends WidgetsBindingObserver {
     tlLogger.v('*#* Number of layouts to log: ${layouts.length}');
     layoutParametersForGestures = hasGestures ? List.unmodifiable(layouts) : null;
 
-    tlLogger.v("Size of widget path cache before removing text objects: ${_WidgetPath.size}");
+    tlLogger.v("Size of widget path cache before removing text objects: ${WidgetPath.size}");
 
-    _WidgetPath.removeWhere((key, value) {
-      final _WidgetPath wp = value as _WidgetPath;
-      final String subType = wp.parameters == null ? "" : wp.parameters['subType']?? "";
+    WidgetPath.removeWhere((key, value) {
+      final WidgetPath wp = value as WidgetPath;
+      final String subType = wp.parameters == null ? "" : wp.parameters!['subType']?? "";
       if (subType.compareTo("TextView") == 0) {
         return true;
       }
       // Images are immutable, so they are reused, even while waiting for the image data
       // to appear. When the data is available, a setState causes a redraw and that is the frame
       // that has the image data!
-      if (subType.compareTo("ImageView") == 0 && wp.parameters['image'] != null) {
+      if (subType.compareTo("ImageView") == 0 && wp.parameters?['image'] != null) {
         tlLogger.v("Removing image and adding to layout!!!");
         return true;
       }
       return false;
     });
 
-    tlLogger.v("Cache after: ${_WidgetPath.size}, # of layouts: ${layouts.length}");
+    tlLogger.v("Cache after: ${WidgetPath.size}, # of layouts: ${layouts.length}");
 
     return layouts;
   }
@@ -570,10 +570,10 @@ class _Pinch {
   static const initScale = 1.0;
   final List<String> directions = ['close', 'open'];
 
-  Offset _startPosition;
-  Offset _updatePosition;
-  double _scale;
-  int    _fingers = 0;
+  Offset? _startPosition;
+  Offset? _updatePosition;
+  double  _scale = -1;
+  int     _fingers = 0;
 
   set startPosition(Offset position) => _startPosition = position;
   set updatePosition(Offset position) => _updatePosition = position;
@@ -583,10 +583,10 @@ class _Pinch {
       _fingers = gesturePoints;
     }
   }
-  Offset get getStartPosition => _startPosition;
-  Offset get getUpdatePosition => _updatePosition;
-  double get getScale => _scale;
-  int    get getMaxFingers => _fingers;
+  Offset? get getStartPosition => _startPosition;
+  Offset? get getUpdatePosition => _updatePosition;
+  double  get getScale => _scale;
+  int     get getMaxFingers => _fingers;
 
   String pinchResult() {
     if (_startPosition == null || _updatePosition == null || _scale == initScale || _fingers != 2) {
@@ -599,25 +599,25 @@ class _Pinch {
 class _Swipe {
   final List<String> directions = ['right', 'left', 'down', 'up'];
 
-  Offset _startPosition;
-  Offset _updatePosition;
-  Duration _startTimestamp;
-  Duration _updateTimestamp;
+  Offset? _startPosition;
+  Offset? _updatePosition;
+  Duration? _startTimestamp;
+  Duration? _updateTimestamp;
 
   set startPosition(Offset position) => _startPosition = position;
   set startTimeStamp(Duration ts) => _startTimestamp = ts;
   set updatePosition(Offset position) => _updatePosition = position;
   set updateTimestamp(Duration ts) => _updateTimestamp = ts;
-  Offset get getStartPosition => _startPosition;
-  Offset get getUpdatePosition => _updatePosition;
-  String getStartTimestampString() => _startTimestamp.inMilliseconds.toString();
-  String getUpdateTimestampString() => _updateTimestamp.inMilliseconds.toString();
+  Offset? get getStartPosition => _startPosition;
+  Offset? get getUpdatePosition => _updatePosition;
+  String getStartTimestampString() => _startTimestamp!.inMilliseconds.toString();
+  String getUpdateTimestampString() => _updateTimestamp!.inMilliseconds.toString();
 
   String calculateSwipe() {
     if (_startPosition == null || _updatePosition == null) {
       return "";
     }
-    final Offset offset = _updatePosition - _startPosition;
+    final Offset offset = _updatePosition! - _startPosition!;
     return _getSwipeDirection(offset);
   }
 
@@ -659,7 +659,7 @@ class TealeafAopInstrumentation {
       FlutterError.onError = wrap(FlutterError.onError, "Flutter onError");
 
       _TlBinder().init();
-      catchForLogging(pointcut.positionalParams[0]?? const Text("The main app widget is null!"));
+      catchForLogging(pointcut.positionalParams?[0]?? const Text("The main app widget is null!"));
 
       tlLogger.v("!!! exit runApp replacement hook");
     });
@@ -737,15 +737,15 @@ class TealeafAopInstrumentation {
   }
 
   static void textHelper(PointCut pointcut, Function getText) async {
-    final BuildContext bc = pointcut.positionalParams[0];
+    final BuildContext bc = pointcut.positionalParams?[0];
     final dynamic target = pointcut.target;
     final Widget widget = (target is Widget) ? target : target.widget;
 
     tlLogger.v('Text widget: ${widget.runtimeType.toString()}, context: ${bc.toString()}');
 
-    final TextStyle style = pointcut.members['style']?? DefaultTextStyle.of(bc).style;
-    final TextAlign textAlign = pointcut.members['textAlign']?? DefaultTextStyle.of(bc).textAlign;
-    final _WidgetPath wc = _WidgetPath.create(bc, shorten: true, hash: true);
+    final TextStyle style = pointcut.members?['style']?? DefaultTextStyle.of(bc).style?? TextStyle();
+    final TextAlign textAlign = pointcut.members?['textAlign']?? DefaultTextStyle.of(bc).textAlign?? TextAlign.left;
+    final WidgetPath wc = WidgetPath.create(bc, shorten: true, hash: true);
 
     wc.addInstance(widget.hashCode);
 
@@ -766,12 +766,12 @@ class TealeafAopInstrumentation {
       return timer.execute(() {
         final dynamic target = pointcut.target;
         final Widget widget = (target is Widget) ? target : target.widget;
-        final _WidgetPath wc = _WidgetPath.getPath(widget.hashCode);
+        final WidgetPath? wc = WidgetPath.getPath(widget.hashCode);
 
         if (wc != null) {
-          final ImageInfo imageInfo = pointcut.positionalParams[0];
-          wc.parameters['image'] = imageInfo.image;
-          tlLogger.v('*** _ImageState._handleImageFrame. Widget hash: ${widget.hashCode}, image: ${wc.parameters['image']}');
+          final ImageInfo imageInfo = pointcut.positionalParams?[0];
+          wc.parameters?['image'] = imageInfo.image;
+          tlLogger.v('*** _ImageState._handleImageFrame. Widget hash: ${widget.hashCode}, image: ${wc.parameters?['image']}');
         }
         timer.execute(() => pointcut.proceed(), label: 'Set image handler');
       });
@@ -787,7 +787,7 @@ class TealeafAopInstrumentation {
     final timer = TimeIt(label: 'Image Injection build');
     try {
       return timer.execute(() {
-        final BuildContext bc = pointcut.positionalParams[0];
+        final BuildContext bc = pointcut.positionalParams?[0];
         final dynamic target = pointcut.target;
         final Widget widget = (target is Widget) ? target : target.widget;
 
@@ -795,7 +795,7 @@ class TealeafAopInstrumentation {
 
         final dynamic build = timer.execute(() => pointcut.proceed(), label: 'Image build only');
 
-        final _WidgetPath wc = _WidgetPath.create(bc, shorten: true, hash: true);
+        final WidgetPath wc = WidgetPath.create(bc, shorten: true, hash: true);
 
         wc.addInstance(widget.hashCode);
 
@@ -804,11 +804,11 @@ class TealeafAopInstrumentation {
           'subType': 'ImageView',
           'data': (widget) async {
             tlLogger.v('_ImageState class: ${target.toString()}, hash: ${wc.key}');
-            final dynamic image = wc.parameters['image'];
+            final dynamic image = wc.parameters?['image'];
             if (image != null) {
               Uint8List data = Uint8List(1);
-              final bool useImageData = await _TlConfiguration().get('TealeafBasicConfig/GetImageDataOnScreenLayout');
-              if (useImageData?? false) {
+              final bool useImageData = await _TlConfiguration().get('TealeafBasicConfig/GetImageDataOnScreenLayout')?? false;
+              if (useImageData) {
                 final ByteData byteData = await image.toByteData(format: ImageByteFormat.rawUnmodified);
                 data = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
               }
@@ -841,13 +841,13 @@ class TealeafAopInstrumentation {
     final TimeIt timer = TimeIt(label: 'Listener Injection for PointerEvents');
     try {
       return timer.execute(() {
-        final Map<dynamic, dynamic> parms = pointcut.namedParams;
+        final Map<dynamic, dynamic>? parms = pointcut.namedParams;
 
-        parms.forEach((key, value) {
+        parms?.forEach((key, value) {
           switch (key) {
             case 'onPointerDown':
               {
-                PointerDownEventListener userCallback = value;
+                PointerDownEventListener? userCallback = value;
                 parms[key] = (PointerDownEvent pde) {
                   pointerEventHelper("DOWN", pde);
                   if (userCallback != null) {
@@ -858,7 +858,7 @@ class TealeafAopInstrumentation {
               }
             case 'onPointerUp':
               {
-                PointerUpEventListener userCallback = value;
+                PointerUpEventListener? userCallback = value;
                 parms[key] = (PointerUpEvent pue) {
                   pointerEventHelper("UP", pue);
                   if (userCallback != null) {
@@ -869,7 +869,7 @@ class TealeafAopInstrumentation {
               }
             case 'onPointerMove':
               {
-                PointerMoveEventListener userCallback = value;
+                PointerMoveEventListener? userCallback = value;
                 parms[key] = (PointerMoveEvent pme) {
                   pointerEventHelper("MOVE", pme);
                   if (userCallback != null) {
@@ -899,15 +899,15 @@ class TealeafAopInstrumentation {
         });
 
         return timer.execute(() =>
-            Listener(key: parms["key"],
-                onPointerDown: parms["onPointerDown"],
-                onPointerMove: parms["onPointerMove"],
-                onPointerUp: parms["onPointerUp"],
-                onPointerHover: parms["onPointerHover"],
-                onPointerCancel: parms["onPointerCancel"],
-                onPointerSignal: parms["onPointerSignal"],
-                behavior: parms["behavior"] ?? HitTestBehavior.deferToChild,
-                child: parms["child"]
+            Listener(key: parms?["key"],
+                onPointerDown: parms?["onPointerDown"],
+                onPointerMove: parms?["onPointerMove"],
+                onPointerUp: parms?["onPointerUp"],
+                onPointerHover: parms?["onPointerHover"],
+                onPointerCancel: parms?["onPointerCancel"],
+                onPointerSignal: parms?["onPointerSignal"],
+                behavior: parms?["behavior"] ?? HitTestBehavior.deferToChild,
+                child: parms?["child"]
             ),
             label: 'Listener Constructor'
         );
@@ -924,36 +924,36 @@ class TealeafAopInstrumentation {
     final TimeIt timer = TimeIt(label: 'GestureDetector Injection');
     try {
       return timer.execute(() {
-        final Map<dynamic, dynamic> params = pointcut.namedParams;
+        final Map<dynamic, dynamic> params = pointcut.namedParams!;
         final Widget child = params['child'];
-        Widget gesture; // Note: this is set AFTER it is referenced in callback. On callback, the value has been set!
+        Widget? gesture; // Note: this is set AFTER it is referenced in callback. On callback, the value has been set!
 
         tlLogger.v('Gesture constructor child widget: ${child.runtimeType.toString()}, child hash: ${child.hashCode}');
 
         // Simple gestures
 
         if (params.containsKey(_tap)) {
-          final GestureTapCallback userCallback = params[_tap];
+          final GestureTapCallback? userCallback = params[_tap];
           params[_tap] = () {
-            gestureHelper(gesture: gesture, gestureType: 'tap');
+            gestureHelper(gesture: gesture!, gestureType: 'tap');
             if (userCallback != null) {
               userCallback();
             }
           };
         }
         if (params.containsKey(_doubleTap)) {
-          final GestureDoubleTapCallback userCallback = params[_doubleTap];
+          final GestureDoubleTapCallback? userCallback = params[_doubleTap];
           params[_doubleTap] = () {
-            gestureHelper(gesture: gesture, gestureType: 'doubletap');
+            gestureHelper(gesture: gesture!, gestureType: 'doubletap');
             if (userCallback != null) {
               userCallback();
             }
           };
         }
         if (params.containsKey(_longPress)) {
-          final GestureLongPressCallback userCallback = params[_longPress];
+          final GestureLongPressCallback? userCallback = params[_longPress];
           params[_longPress] = () {
-            gestureHelper(gesture: gesture, gestureType: 'taphold');
+            gestureHelper(gesture: gesture!, gestureType: 'taphold');
             if (userCallback != null) {
               userCallback();
             }
@@ -964,8 +964,8 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onPanStart];
           params[_onPanStart] = (DragStartDetails details) {
             final Offset position = details.globalPosition;
-            final Duration timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onPanStart, offset: position, timestamp: timestamp);
+            final Duration? timestamp = details.sourceTimeStamp;
+            swipeGestureHelper(gesture: gesture!, onType: _onPanStart, offset: position, timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -975,8 +975,8 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onPanUpdate];
           params[_onPanUpdate] = (DragUpdateDetails details) {
             final Offset position = details.globalPosition;
-            final Duration timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onPanUpdate, offset: position, timestamp: timestamp);
+            final Duration? timestamp = details.sourceTimeStamp;
+            swipeGestureHelper(gesture: gesture!, onType: _onPanUpdate, offset: position, timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -986,7 +986,7 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onPanEnd];
           params[_onPanEnd] = (DragEndDetails details) {
             final Velocity velocity = details.velocity;
-            swipeGestureHelper(gesture: gesture, onType: _onPanEnd, velocity: velocity);
+            swipeGestureHelper(gesture: gesture!, onType: _onPanEnd, velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -996,7 +996,7 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onScaleStart];
           params[_onScaleStart] = (ScaleStartDetails details) {
             final Offset position  = details.focalPoint;
-            pinchGestureHelper(gesture: gesture, onType: _onScaleStart, offset:position);
+            pinchGestureHelper(gesture: gesture!, onType: _onScaleStart, offset:position);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1010,7 +1010,7 @@ class TealeafAopInstrumentation {
             final int fingers = details.pointerCount;
             tlLogger.v('&&& ScaleUpdate, scale: $scale, fingers: $fingers');
 
-            pinchGestureHelper(gesture: gesture, onType: _onScaleUpdate, scale: scale, fingers: fingers, offset: position);
+            pinchGestureHelper(gesture: gesture!, onType: _onScaleUpdate, scale: scale, fingers: fingers, offset: position);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1021,7 +1021,7 @@ class TealeafAopInstrumentation {
           params[_onScaleEnd] = (ScaleEndDetails details) {
             final int fingers = details.pointerCount;
             final Velocity velocity = details.velocity;
-            pinchGestureHelper(gesture: gesture, onType: _onScaleEnd, fingers: fingers, velocity: velocity);
+            pinchGestureHelper(gesture: gesture!, onType: _onScaleEnd, fingers: fingers, velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1110,10 +1110,10 @@ class TealeafAopInstrumentation {
     final TimeIt timer = TimeIt(label: 'GestureDetector Injection build');
     try {
       return timer.execute(() {
-        final Widget w = pointcut.target;
+        Widget? w = pointcut.target as Widget;
         tlLogger.v('Build WIDGET: ${w.runtimeType.toString()} ${w.hashCode}');
-        final BuildContext b = pointcut.positionalParams[0];
-        final _WidgetPath wc = _WidgetPath.create(b, shorten: true, hash: true);
+        final BuildContext b = pointcut.positionalParams?[0];
+        final WidgetPath wc = WidgetPath.create(b, shorten: true, hash: true);
 
         wc.addInstance(w.hashCode);
 
@@ -1160,7 +1160,7 @@ class TealeafAopInstrumentation {
      return data;
    }
 
-  static Object encodeJsonPointerEvent(Object value) {
+  static Object? encodeJsonPointerEvent(Object? value) {
     Map<String, dynamic> map = {};
 
     if (value != null && value is PointerEvent) {
@@ -1179,7 +1179,7 @@ class TealeafAopInstrumentation {
     return map;
   }
 
-  static dynamic wrap(dynamic Function(FlutterErrorDetails fed) f, String type) {
+  static dynamic wrap(dynamic Function(FlutterErrorDetails fed)? f, String type) {
     if (f != null) {
       final Function(FlutterErrorDetails fed) copyF = f;
 
@@ -1206,19 +1206,19 @@ class TealeafAopInstrumentation {
 
       if (e is PlatformException) {
         final PlatformException pe = e;
-        data["nativecode"] = pe.code?? "";
+        data["nativecode"] = pe.code;
         data["nativemessage"] = pe.message?? "";
         data["nativestacktrace"] = pe.stacktrace?? "";
-        data["message"] = e.toString()?? "";
+        data["message"] = e.toString();
       }
       else if (e is TealeafException) {
         final TealeafException te = e;
 
-        data["nativecode"] = te.code?? "";
-        data["nativemessage"] = te.getNativeMsg?? "";
-        data["nativestacktrace"] = te.getNativeDetails?? "";
-        data["message"] = te.getMsg?? "";
-        isLogException = te.getMsg.contains(TealeafException.logErrorMsg);
+        data["nativecode"] = te.code?? '';
+        data["nativemessage"] = te.getNativeMsg?? '';
+        data["nativestacktrace"] = te.getNativeDetails?? '';
+        data["message"] = te.getMsg?? '';
+        isLogException = te.getMsg?.contains(TealeafException.logErrorMsg)?? false;
       } else {
         String message = "";
         try {
@@ -1233,7 +1233,7 @@ class TealeafAopInstrumentation {
       }
 
       data["name"] = e.runtimeType.toString();
-      data["stacktrace"] = stackTrace.toString()?? "";
+      data["stacktrace"] = stackTrace.toString();
       data["handled"] = false;
 
       // Prevent recursive calls if exception message can not be processed!!
@@ -1246,28 +1246,28 @@ class TealeafAopInstrumentation {
     });
   }
 
-  static String getGestureTarget(_WidgetPath wc) {
-    final dynamic widget = wc.context.widget;
+  static String getGestureTarget(WidgetPath wc) {
+    final dynamic widget = wc.context!.widget;
     String gestureTarget;
 
     try {
       gestureTarget = widget.child.runtimeType.toString();
     }
     on NoSuchMethodError {
-      gestureTarget = wc.parentWidgetType;
+      gestureTarget = wc.parentWidgetType!;
     }
     return gestureTarget;
   }
 
-  static void gestureHelper({Widget gesture, String gestureType}) async {
+  static void gestureHelper({Widget? gesture, String? gestureType}) async {
     final int hashCode = gesture.hashCode;
 
-    if (_WidgetPath.containsKey(hashCode)) {
-      final _WidgetPath wc = _WidgetPath.getPath(hashCode);
-      final BuildContext context = wc.context;
+    if (WidgetPath.containsKey(hashCode)) {
+      final WidgetPath? wc = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wc!.context;
       final String gestureTarget = getGestureTarget(wc);
 
-      tlLogger.v('@@@ ${gestureType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v('@@@ ${gestureType!.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
       tlLogger.v('--> Path: ${wc.widgetPath}, digest: ${wc.widgetDigest}');
 
       await PluginTealeaf.onTlGestureEvent(
@@ -1282,12 +1282,12 @@ class TealeafAopInstrumentation {
     }
   }
 
-  static void swipeGestureHelper({@required Widget gesture, @required String onType, Offset offset, Duration timestamp, Velocity velocity}) async {
+  static void swipeGestureHelper({required Widget gesture, required String onType, Offset? offset, Duration? timestamp, Velocity? velocity}) async {
     final int hashCode = gesture.hashCode;
 
-    if (_WidgetPath.containsKey(hashCode)) {
-      final _WidgetPath wc = _WidgetPath.getPath(hashCode);
-      final BuildContext context = wc.context;
+    if (WidgetPath.containsKey(hashCode)) {
+      final WidgetPath? wc = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wc!.context;
       final String gestureTarget = getGestureTarget(wc);
 
       tlLogger.v('@@@ ${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
@@ -1296,27 +1296,27 @@ class TealeafAopInstrumentation {
       switch (onType) {
         case _onPanStart: {
           final _Swipe swipe = _Swipe();
-          swipe.startPosition = offset;
-          swipe.startTimeStamp = timestamp;
+          swipe.startPosition = offset!;
+          swipe.startTimeStamp = timestamp!;
           wc.setParameters = <String, dynamic> {'swipe' : swipe};
           break;
         }
         case _onPanUpdate: {
-          if (wc.parameters != null && wc.parameters.containsKey('swipe')) {
-            final _Swipe swipe = wc.parameters['swipe'];
-            swipe.updatePosition = offset;
-            swipe.updateTimestamp = timestamp;
+          if (wc.parameters != null && wc.parameters!.containsKey('swipe')) {
+            final _Swipe swipe = wc.parameters?['swipe'];
+            swipe.updatePosition = offset!;
+            swipe.updateTimestamp = timestamp!;
           }
           break;
         }
         case _onPanEnd: {
-          if (wc.parameters != null && wc.parameters.containsKey('swipe')) {
-            final _Swipe swipe = wc.parameters['swipe'];
+          if (wc.parameters != null && wc.parameters!.containsKey('swipe')) {
+            final _Swipe swipe = wc.parameters?['swipe'];
             final String direction = swipe.calculateSwipe();
             if (direction.isNotEmpty) {
-              final Offset start = swipe.getStartPosition;
-              final Offset end   = swipe.getUpdatePosition;
-              wc.parameters.clear();
+              final Offset start = swipe.getStartPosition!;
+              final Offset end   = swipe.getUpdatePosition!;
+              wc.parameters!.clear();
               await PluginTealeaf.onTlGestureEvent(
                 gesture: 'swipe',
                 id: wc.widgetPath,
@@ -1324,7 +1324,7 @@ class TealeafAopInstrumentation {
                 data: <String, dynamic> {
                   'pointer1':  {'dx': start.dx, 'dy': start.dy, 'ts': swipe.getStartTimestampString()},
                   'pointer2':  {'dx': end.dx,   'dy': end.dy,   'ts': swipe.getUpdateTimestampString()},
-                  'velocity':  {'dx': velocity.pixelsPerSecond.dx, 'dy': velocity.pixelsPerSecond.dy},
+                  'velocity':  {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
                   'direction': direction,
                 },
                 layoutParameters: _TlBinder.layoutParametersForGestures
@@ -1342,12 +1342,12 @@ class TealeafAopInstrumentation {
     }
   }
 
-  static void pinchGestureHelper({@required Widget gesture, @required String onType, Offset offset, double scale, Velocity velocity, int fingers}) async {
+  static void pinchGestureHelper({required Widget gesture, required String onType, Offset? offset, double? scale, Velocity? velocity, int fingers=0}) async {
     final int hashCode = gesture.hashCode;
 
-    if (_WidgetPath.containsKey(hashCode)) {
-      final _WidgetPath wc = _WidgetPath.getPath(hashCode);
-      final BuildContext context = wc.context;
+    if (WidgetPath.containsKey(hashCode)) {
+      final WidgetPath? wc = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wc!.context;
       final String gestureTarget = getGestureTarget(wc);
 
       tlLogger.v('@@@ ${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
@@ -1355,30 +1355,30 @@ class TealeafAopInstrumentation {
       switch (onType) {
         case _onScaleStart: {
           final _Pinch pinch = _Pinch();
-          pinch.startPosition = offset;
+          pinch.startPosition = offset!;
           wc.setParameters = <String, dynamic> {'pinch' : pinch};
           break;
         }
         case _onScaleUpdate: {
-          if (wc.parameters != null && wc.parameters.containsKey('pinch')) {
-            final _Pinch pinch = wc.parameters['pinch'];
-            pinch.updatePosition = offset;
-            pinch.scale = scale;
+          if (wc.parameters != null && wc.parameters!.containsKey('pinch')) {
+            final _Pinch pinch = wc.parameters?['pinch'];
+            pinch.updatePosition = offset!;
+            pinch.scale = scale!;
             pinch.fingers = fingers;
           }
           break;
         }
         case _onScaleEnd: {
-          if (wc.parameters != null && wc.parameters.containsKey('pinch')) {
-            final _Pinch pinch = wc.parameters['pinch'];
+          if (wc.parameters != null && wc.parameters!.containsKey('pinch')) {
+            final _Pinch pinch = wc.parameters?['pinch'];
             pinch.fingers = fingers;
             final String direction = pinch.pinchResult();
             tlLogger.v('--> Pinch, fingers: ${pinch.getMaxFingers}, direction: $direction');
 
             if (direction.isNotEmpty) {
-              final Offset start = pinch.getStartPosition;
-              final Offset end   = pinch.getUpdatePosition;
-              wc.parameters.clear();
+              final Offset start = pinch.getStartPosition!;
+              final Offset end   = pinch.getUpdatePosition!;
+              wc.parameters!.clear();
               await PluginTealeaf.onTlGestureEvent(
                   gesture: 'pinch',
                   id: wc.widgetPath,
@@ -1387,7 +1387,7 @@ class TealeafAopInstrumentation {
                     'pointer1':  {'dx': start.dx, 'dy': start.dy},
                     'pointer2':  {'dx': end.dx,   'dy': end.dy},
                     'direction': direction,
-                    'velocity':  {'dx': velocity.pixelsPerSecond.dx, 'dy': velocity.pixelsPerSecond.dy},
+                    'velocity':  {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
                   },
                   layoutParameters: _TlBinder.layoutParametersForGestures
               );

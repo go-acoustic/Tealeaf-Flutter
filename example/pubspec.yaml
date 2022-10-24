@@ -7,7 +7,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 build-number: 1.0.0
 
 environment:
-  sdk: ">=2.3.0-dev.68.0 <3.0.0"
+  sdk: ">=2.18.0 <3.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -28,8 +28,10 @@ dependencies:
     # See https://dart.dev/tools/pub/dependencies#version-constraints
     # The example app is bundled with the plugin so we use a path dependency on
     # the parent directory to specify the current plugin's version. Applications
-    # should use either the pub.dev repo or the Acustic GitHub repo as shown above.
+    # should use either the pub.dev repo or the Acoustic GitHub repo as shown above.
     path: ../
+
+  http: ^0.13.4
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

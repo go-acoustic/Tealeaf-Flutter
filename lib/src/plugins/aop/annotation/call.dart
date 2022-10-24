@@ -1,4 +1,4 @@
-// @dart=2.8
+// @dart=2.12
 
 import 'annotation_info.dart';
 
@@ -11,7 +11,7 @@ class Call extends AnnotationInfo {
 
   @pragma('vm:entry-point')
   const Call._(String importUri, String clsName, String methodName,
-      {bool isRegex,this.excludeCoreLib})
+      {bool isRegex=false, this.excludeCoreLib=false})
       : super(
             importUri: importUri,
             clsName: clsName,
@@ -20,5 +20,4 @@ class Call extends AnnotationInfo {
 
   /// Indicate whether to exclude flutter libs
   final bool excludeCoreLib;
-
 }

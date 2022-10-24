@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
 import 'package:yaml/yaml.dart';
 
 // ignore: unused_import
@@ -10,28 +8,28 @@ import 'tealeaf_aop.dart';
 import 'logger.dart';
 
 class TealeafException implements Exception {
-  TealeafException.create({int code, this.msg, this.nativeMsg, this.nativeStacktrace, this.nativeDetails}) {
+  TealeafException.create({required int code, required this.msg, this.nativeMsg, this.nativeStacktrace, this.nativeDetails}) {
     this.code = _getCode(code);
   }
 
   TealeafException(PlatformException pe, {this.msg}) :
     code = pe.code, nativeStacktrace = pe.stacktrace, nativeMsg = pe.message,
-    nativeDetails = pe.details.toString();
+    nativeDetails = pe.details?.toString();
 
   static String logErrorMsg = 'Error logging an exception';
   static int    codeBase    = 600;
 
-  final String nativeStacktrace;
-  final String nativeDetails;
-  final String nativeMsg;
-  final String msg;
-  String       code;
+  String? nativeStacktrace;
+  String? nativeDetails;
+  String? nativeMsg;
+  String? msg;
+  String? code;
 
   static String _getCode(int num) => 'Tealeaf API error: #${num+codeBase}';
-  String get getMsg => msg;
-  String get getNativeMsg => nativeMsg;
-  String get getNativeStacktrace => nativeStacktrace;
-  String get getNativeDetails => nativeDetails;
+  String? get getMsg => msg;
+  String? get getNativeMsg => nativeMsg;
+  String? get getNativeStacktrace => nativeStacktrace;
+  String? get getNativeDetails => nativeDetails;
 }
 
 class PluginTealeaf {
@@ -94,7 +92,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> tlSetEnvironment({@required int screenWidth, @required int screenHeight}) async {
+  static Future<void> tlSetEnvironment({required int screenWidth, required int screenHeight}) async {
     try {
       await _channel.invokeMethod('setenv', {'screenw': screenWidth, 'screenh': screenHeight});
     }
@@ -103,7 +101,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> tlConnection({@required String url, @required int statusCode, String description, int responseSize, int initTime, int loadTime, responseTime = 0}) async {
+  static Future<void> tlConnection({required String url, required int statusCode, String description='', int responseSize=0, int initTime=0, int loadTime=0, responseTime = 0}) async {
     if (responseTime == 0) {
       responseTime = loadTime - initTime;
     }
@@ -123,7 +121,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> tlApplicationCustomEvent({@required String eventName, Map<String, String> customData, int logLevel}) async {
+  static Future<void> tlApplicationCustomEvent({required String? eventName, Map<String, String>? customData, int? logLevel}) async {
     if (eventName == null) {
       throw TealeafException.create(code: 6, msg: 'eventName is null');
     }
@@ -139,7 +137,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> tlApplicationCaughtException({Exception caughtException, StackTrace stack, Map<String,String> appData}) async {
+  static Future<void> tlApplicationCaughtException({Exception? caughtException, StackTrace? stack, Map<String,String>? appData}) async {
     try {
       if (caughtException == null) {
         throw TealeafException.create(code: 4, msg: 'User caughtException is null');
@@ -157,7 +155,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> onTlException({@required Map<dynamic, dynamic> data}) async {
+  static Future<void> onTlException({required Map<dynamic, dynamic> data}) async {
     try {
       await _channel.invokeMethod('exception', data);
     }
@@ -167,7 +165,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> onTlPointerEvent({@required Map fields}) async {
+  static Future<void> onTlPointerEvent({required Map fields}) async {
     tlLogger.v('fields: ${fields.toString()}');
 
     try {
@@ -179,7 +177,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> onTlGestureEvent({@required String gesture, @required String id, @required String target, Map<String, dynamic> data, List<Map<String,dynamic>> layoutParameters}) async {
+  static Future<void> onTlGestureEvent({required String? gesture, required String id, required String target, Map<String, dynamic>? data, List<Map<String,dynamic>>? layoutParameters}) async {
     try {
       if (["pinch", "swipe", "taphold", "doubletap", "tap"].contains(gesture)) {
         return await _channel.invokeMethod(
@@ -194,7 +192,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<void> onScreenview(String tlType, Duration timestamp, [List<Map<String,dynamic>> layoutParameters]) async {
+  static Future<void> onScreenview(String tlType, Duration timestamp, [List<Map<String,dynamic>>? layoutParameters]) async {
     try {
       if (["LOAD", "UNLOAD", "VISIT"].contains(tlType)) {
         final String timeString = timestamp.inMicroseconds.toString();
@@ -219,7 +217,7 @@ class PluginTealeaf {
     }
   }
 
-  static Future<String> maskText(String text, [String page]) async {
+  static Future<String> maskText(String text, [String? page]) async {
     try {
       return await _channel.invokeMethod('maskText', <dynamic, dynamic>{'text': text, 'page' : page?? ""});
     }

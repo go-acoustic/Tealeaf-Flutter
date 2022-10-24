@@ -1,4 +1,4 @@
-// @dart=2.8
+// @dart=2.12
 
 import '../annotation/annotation_info.dart';
 
@@ -7,11 +7,11 @@ import '../annotation/annotation_info.dart';
 class FieldGet extends AnnotationInfo {
   /// Call grammar default constructor.
   const factory FieldGet(String importUri, String clsName, String fieldName, bool isStatic,
-      {bool isRegex}) = FieldGet._;
+      {bool? isRegex}) = FieldGet._;
 
   @pragma('vm:entry-point')
   const FieldGet._(String importUri, String clsName, this.fieldName, this.isStatic,
-      {bool isRegex})
+      {bool? isRegex})
       : super(
             importUri: importUri,
             clsName: clsName,

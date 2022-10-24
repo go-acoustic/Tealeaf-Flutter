@@ -11,7 +11,7 @@ class TealeafAopInstrumentationHttp {
 @pragma("vm:entry-point")
   dynamic _xxxTealeaf20(PointCut pointCut) async {
     final DateTime startTime = DateTime.now();
-    final Object request = pointCut.positionalParams[0];
+    final Object request = pointCut.positionalParams?[0];
     final int hash = request.hashCode;
 
     tlLogger.v("TL http BaseClient: ${request.toString()}, request hash: $hash, @${startTime.millisecondsSinceEpoch}");
@@ -26,12 +26,12 @@ class TealeafAopInstrumentationHttp {
   static Object _xxxTealeaf21(PointCut pointCut) {
     tlLogger.v("TL http response.fromStream: ${pointCut.toString()}");
 
-    final Future<http.Response> result = pointCut.proceed();
+    final Future<http.Response> result = pointCut.proceed() as Future<http.Response>;
 
     result.whenComplete(() async {
       final http.Response response = await result;
       final DateTime doneTime = DateTime.now();
-      final http.Request request = response.request;
+      final http.Request request = response.request as http.Request;
       final int hash = request.hashCode;
       final String url = request.url.toString();
       final int start = _TimedMap<int, int>().remove(hash) ?? 0;
@@ -43,8 +43,8 @@ class TealeafAopInstrumentationHttp {
         PluginTealeaf.tlConnection(
             url: url,
             statusCode: response.statusCode,
-            description: response.reasonPhrase,
-            responseSize: response.contentLength,
+            description: response.reasonPhrase?? '',
+            responseSize: response.contentLength?? 0,
             initTime: start,
             loadTime: done);
       }
@@ -59,9 +59,9 @@ class _TimedMap<K,V> {
   static const int frequency = 5;         // secs
   static bool running = false;
 
-  V data;
-  int start;
-  int timeout;
+  V?   data;
+  int  start = 0;
+  int  timeout = 0;
   final int defaultTimeout;
 
   static Map<dynamic,dynamic> map = {};
@@ -76,9 +76,9 @@ class _TimedMap<K,V> {
     checkForTimeouts();
   }
 
-  V remove(K key) {
+  V? remove(K key) {
     final _TimedMap<K,V> item = map.remove(key);
-    return item?.data;
+    return item.data;
   }
 
   void checkForTimeouts() {

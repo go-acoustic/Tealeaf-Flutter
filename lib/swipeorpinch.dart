@@ -13,7 +13,7 @@ import 'logger.dart';
 ///
 class SwipeOrPinchDetector extends StatefulWidget {
   const SwipeOrPinchDetector({
-    Key  key,
+    Key? key,
     this.behavior,
     this.onSwipe,
     this.onPinch,
@@ -22,7 +22,7 @@ class SwipeOrPinchDetector extends StatefulWidget {
     @required this.child,
   }) : super(key: key);
 
-  final void Function (double scale) onPinch;
+  final void Function (double? scale)? onPinch;
   final bool pinch;
 
   /// How this gesture detector should behave during hit testing.
@@ -30,18 +30,18 @@ class SwipeOrPinchDetector extends StatefulWidget {
   /// This defaults to [HitTestBehavior.deferToChild] if [child] is not null and
   /// [HitTestBehavior.translucent] if child is null.
 
-  final HitTestBehavior behavior;
+  final HitTestBehavior? behavior;
 
   /// The widget below this widget in the tree.
   ///
   /// {@macro flutter.widgets.ProxyWidget.child}
-  final Widget child;
+  final Widget? child;
 
   /// Called when the user has swiped in a particular direction.
   ///
   /// - The [direction] parameter is the [SwipeDirection] of the swipe.
   /// - The [offset] parameter is the offset of the swipe in the [direction].
-  final void Function(SwipeDirection direction, Offset offset) onSwipe;
+  final void Function(SwipeDirection direction, Offset offset)? onSwipe;
 
   /// If true, the callbacks are called every time the gesture gets updated
   /// and provide an [Offset] value in each callback.
@@ -50,13 +50,13 @@ class SwipeOrPinchDetector extends StatefulWidget {
   final bool liveFeedback;
 
   @override
-  _DetectorState createState() => _DetectorState();
+  DetectorState createState() => DetectorState();
 }
 
-class _DetectorState extends State<SwipeOrPinchDetector> {
-  Offset _startPosition;
-  Offset _updatePosition;
-  double lastScale;
+class DetectorState extends State<SwipeOrPinchDetector> {
+  late Offset _startPosition;
+  late Offset _updatePosition;
+  double? lastScale;
 
   @override
   void initState() {

@@ -1,4 +1,4 @@
-// @dart=2.8
+// @dart=2.12
 
 import '../annotation/annotation_info.dart';
 
@@ -7,11 +7,11 @@ import '../annotation/annotation_info.dart';
 class Add extends AnnotationInfo {
   /// Call grammar default constructor.
   const factory Add(String importUri, String clsName,
-      {bool isRegex, String superCls}) = Add._;
+      {required bool isRegex, String superCls}) = Add._;
 
   @pragma('vm:entry-point')
   const Add._(String importUri, String clsName,
-      {bool isRegex, String superCls})
+      {required bool isRegex, String? superCls})
       : super(
             importUri: importUri,
             clsName: clsName,

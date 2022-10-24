@@ -12,7 +12,7 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -52,27 +52,27 @@ class _MyAppState extends State<MyApp> {
     // We also handle the message potentially returning null.
     try {
       platformVersion =
-          await PluginTealeaf.platformVersion ?? 'Unknown platform version';
+          await PluginTealeaf.platformVersion;
     } on TealeafException {
       platformVersion = 'Failed to get platform version.';
     }
     try {
-      tealeafVersion = await PluginTealeaf.tealeafVersion ?? 'Unknown tealeaf lib version';
+      tealeafVersion = await PluginTealeaf.tealeafVersion;
     } on TealeafException {
       tealeafVersion = 'Failed to get tealeaf lib version';
     }
     try {
-      tealeafSessionId = await PluginTealeaf.tealeafSessionId ?? 'Unknown tealeaf session id';
+      tealeafSessionId = await PluginTealeaf.tealeafSessionId;
     } on TealeafException {
       tealeafSessionId = 'Failed to get current session id';
     }
     try {
-      pluginVersion = await PluginTealeaf.pluginVersion ?? 'Unknown plugin version';
+      pluginVersion = await PluginTealeaf.pluginVersion;
     } on TealeafException {
       pluginVersion = 'Failed to get plugin version';
     }
     try {
-      appKey = await PluginTealeaf.appKey ?? 'Unknown app key';
+      appKey = await PluginTealeaf.appKey;
     } on TealeafException {
       appKey = 'Failed to get app key';
     }
@@ -85,7 +85,7 @@ class _MyAppState extends State<MyApp> {
     if (!mounted) return;
 
     if (tealeafSessionId.length > 32) {
-      tealeafSessionId = tealeafSessionId.substring(0, 32) + "...";
+      tealeafSessionId = '${tealeafSessionId.substring(0, 32)}...';
     }
     setState(() {
       _platformVersion  = platformVersion;
@@ -105,7 +105,7 @@ class _MyAppState extends State<MyApp> {
         ),
         body: SwipeOrPinchDetector(
           pinch: _pinch,
-          onPinch: (double scale) => debugPrint('PINCH (main.dart), scale: $scale'),
+          onPinch: (double? scale) => debugPrint('PINCH (main.dart), scale: $scale'),
           onSwipe: (dir, offset) => debugPrint('SWIPE (main.dart), direction: ${dir.toString()}, x,y: ${offset.dx}.${offset.dy}'),
           child: SingleChildScrollView(child: Center(
           child: Column(children: [

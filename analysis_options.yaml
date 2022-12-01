@@ -6,3 +6,7 @@ analyzer:
   exclude:
     - tealeaf_aop/**
     - scripts/**
+
+linter:
+  rules:
+    - avoid_as: false

@@ -1015,11 +1015,20 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
     ScreenUtil.setControls(layout, widgetLayouts, scaleWidth, scaleHeight, maskedPositions);
 
-    byte[] nextImgBytes = ScreenUtil.obscureAndCompress(screenBitmap, maskedPositions);
+    byte[] nextImageBytes = new byte[0];
 
-    if (nextImgBytes == null) {
-      nextImgBytes = new byte[0];
-      LOGGER.log(Level.INFO, "Warning: Unable to capture and compress screen image!");
+    if (screenBitmap == null) {
+      LOGGER.log(Level.WARNING, "Warning: Failed to obtain screen snapshot from Flutter!");
+    }
+    else {
+      final byte[] imageBytes = ScreenUtil.obscureAndCompress(screenBitmap, maskedPositions);
+
+      if (imageBytes == null) {
+        LOGGER.log(Level.WARNING, "Warning: Unable to obscure and/or compress screen image!");
+      }
+      else {
+        nextImageBytes = imageBytes;
+      }
     }
     final long end = System.currentTimeMillis();
     LOGGER.log(Level.INFO, "*** Screenshot elapsed time (ms): " + (end - start) +
@@ -1029,10 +1038,10 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
     if (current != null) {
       final String pageName = current.getLogicalPageName();
-      final String currentName = new Md5(nextImgBytes).asString();
+      final String currentName = new Md5(nextImageBytes).asString();
 
       LOGGER.log(Level.INFO, "Current page (Md5): " + pageName +
-              ", next MD5: " + currentName + ", final image size: " + nextImgBytes.length);
+              ", next MD5: " + currentName + ", final image size: " + nextImageBytes.length);
 
       if (lastPage.contentEquals(currentName)) {
         LOGGER.log(Level.INFO, "*** Skipping log of screenview, transition screen has not updated");
@@ -1041,7 +1050,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
       LOGGER.log(Level.INFO, "*** Screen is updated, logging changed screen.");
 
       Tealeaf.logScreenview(activity, currentName, ScreenviewType.LOAD, lastPage);
-      ScreenUtil.logLayout(activity, currentName, layout, nextImgBytes);
+      ScreenUtil.logLayout(activity, currentName, layout, nextImageBytes);
 
       TLFCache.flush(true); //TBD: remove (force flush for now for debugging)
 
@@ -1357,7 +1366,8 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
       gesture.setTouches(touches);
 
       if (LayoutUtil.canCaptureUserEvents(activity) && LayoutUtil.takeScreenShot(activity)) {
-        Thread.sleep(EOCore.getConfigItemLong("GestureConfirmedScreenshotDelay", TealeafEOLifecycleObject.getInstance()));
+        // TBD: No longer used? (updated to latest config files -- apparent change)
+        // Thread.sleep(EOCore.getConfigItemLong("GestureConfirmedScreenshotDelay", TealeafEOLifecycleObject.getInstance()));
         gesture.setBase64Image(lastPageImage.getBase64Image());
       }
     }

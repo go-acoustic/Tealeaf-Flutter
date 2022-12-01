@@ -28,6 +28,7 @@ class _MyAppState extends State<MyApp> {
   String _appKey           = undefined;
   bool   _aspectdEnabled   = false;
   bool   _pinch            = false;
+  bool   _showExceptionMsg = true;
   static int count         = 0;
 
   TextEditingController textEditingController = TextEditingController();
@@ -38,6 +39,14 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     initPlatformState();
+    Future.delayed(const Duration(seconds: 20), () {
+      debugPrint('Removing "tap on me for exception" message');
+      if (mounted) {
+        setState(() {
+          _showExceptionMsg = false;
+        });
+      }
+    });
   }
 
   @override
@@ -169,11 +178,11 @@ class _MyAppState extends State<MyApp> {
             const Padding(padding: EdgeInsets.only(top: 10.0)),
             Text('AppKey: $_appKey'),
             const Text('Tealeaf SaaS Session ID: '),
-            Text(_tealeafSessionId),
+            SelectableText(_tealeafSessionId),
             const Padding(padding: EdgeInsets.only(top: 20.0)),
             Text('Taps: $count'),
             const Padding(padding: EdgeInsets.only(bottom: 20.0)),
-            GestureDetector(
+            if (_showExceptionMsg) GestureDetector(
               child: const Text("Tap on me to cause an exception!"),
               onTap: (){
                 debugPrint("User wanted an exception thrown");

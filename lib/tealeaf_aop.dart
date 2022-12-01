@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:ui';
 import 'package:crypto/crypto.dart';
 
@@ -15,12 +16,13 @@ import 'package:tl_flutter_plugin/logger.dart';
 class WidgetPath {
   WidgetPath();
 
-  static const String excl = r'^(Focus|Semantics|.*<.*>|InheritedElement|_|.*\n_).*$';
+  static const String excl = r'^(Focus|Semantics|InheritedElement|.*\n_).*$';
   static const String reduce = r"[a-z]";
   static const String sep = '/';
-  static Hash get digest => sha1;
+  static Hash  get digest => sha1;
 
-  static Map<int, dynamic> widgetContexts = {};
+  static Map<int, dynamic>   widgetContexts = {};
+  static Map<Widget, String> pathCache      = {};
 
   BuildContext? context;
   Element?  parent;
@@ -31,7 +33,23 @@ class WidgetPath {
   late bool hash;
   late String path;
 
-  Map<String, dynamic>? parameters;
+  int  position = 0;
+  bool usedInLayout = false;
+  Map<String, dynamic> parameters = {};
+
+  int siblingPosition(Element parent, Widget child) {
+   int result;
+
+   try {
+     final dynamic currentWidget = parent.widget;
+     final List<Widget> children = currentWidget.children;
+     result = children.indexOf(child);
+   }
+   on NoSuchMethodError {
+     result = -1;
+   }
+   return result;
+  }
 
   WidgetPath.create(this.context, {this.shorten = true, this.hash = false, String exclude = excl}) {
     if (context == null) {
@@ -40,55 +58,55 @@ class WidgetPath {
 
     final StringBuffer path = StringBuffer();
     final RegExp re = RegExp(exclude, multiLine: true);
-    final List<String> stk = [];
-    Widget? widget = context?.widget;
+    final List<dynamic> stk = [];
+    final Widget widget = context!.widget;
+
+    String widgetName = '$sep${widget.runtimeType.toString()}';
+    Widget? child;
 
     this.path = '';
 
     context?.visitAncestorElements((ancestor) {
-      final String wrt = ancestor.widget.runtimeType.toString();
-      final String rt = ancestor.runtimeType.toString();
-      final String rts = '$rt\n$wrt';
+      final Widget parentWidget = ancestor.widget;
+      String prt = parentWidget.runtimeType.toString();
+      final String art = '${ancestor.runtimeType.toString()}\n$prt';
 
       if (stk.isEmpty) {
-        stk.add(widget.runtimeType.toString());
         parent = ancestor;
       }
-
-      if (!re.hasMatch(rts)) {
-        stk.add(wrt);
+      final String? parentPath = pathCache[parentWidget];
+      if (parentPath != null) {
+        path.write(parentPath);
+        return false;
       }
+      if (!re.hasMatch(art)) {
+        if (child != null) {
+          final int index = siblingPosition(ancestor, child!);
+          if (index != -1) {
+            prt += '_$index';
+          }
+        }
+        stk.add(parentWidget);
+        stk.add(makeShorter(prt));
+      }
+      child = ancestor.widget;
       return true;
     });
 
-    String widgetName = '';
-    while (stk.isNotEmpty) {
-      path.write('$widgetName$sep');
-      widgetName = stk.removeLast();
-    }
-    this.path = makeShorter(path.toString()) + widgetName;
-
-    try {
-      final dynamic parentWidget = parent?.widget;
-      final List<Widget> children = parentWidget.children;
-      tlLogger.v("Widget has siblings, checking for parent list position");
-      final int position = children.indexOf(widget!);
-      this.path += '/$position';
-      parentWidgetType = parentWidget.runtimeType.toString();
-    }
-    on NoSuchMethodError {
-      tlLogger.v('Widget has <= 1 child');
+    for (int index = stk.length; index > 0; ) {
+      path.write('$sep${stk[--index]}');
+      pathCache[stk[--index]] = path.toString();
     }
 
-    if (hash) {
-      pathHash = digest.convert(utf8.encode(this.path)).toString();
-    }
+    path.write(widgetName);
+    this.path = path.toString();
+    parentWidgetType = parent!.widget.runtimeType.toString();
 
-    tlLogger.v('@@@ WIDGET: ${widget.runtimeType.toString()}, path: $widgetPath, digest: $widgetDigest');
+    tlLogger.v('Widget path added: ${widget.runtimeType.toString()}, path: $this.path, digest: ${widgetDigest()}');
   }
 
-  int? findExistingPathKey() {
-    int? match;
+  List<int> findExistingPathKeys() {
+    final List<int> matches = [];
 
     for (MapEntry<int, dynamic> entry in widgetContexts.entries) {
       final WidgetPath wp = entry.value;
@@ -98,11 +116,10 @@ class WidgetPath {
       }
       if (isEqual(wp)) {
         tlLogger.v("Path match [${entry.key}]");
-        match = entry.key;
-        break;
+        matches.add(entry.key);
       }
     }
-    return match;
+    return matches;
   }
 
   bool isEqual(WidgetPath other) {
@@ -114,26 +131,56 @@ class WidgetPath {
   }
 
   void addInstance(int key) {
-    final int? existingKey = findExistingPathKey();
-    removePath(existingKey);
-    if (existingKey != null) {
-      tlLogger.v('Removing key $existingKey from widgetContext cache');
+    final List<int> existingKeys = findExistingPathKeys();
+    final int keyCount = existingKeys.length;
+    if (keyCount > 0) {
+      final WidgetPath firstPath = widgetContexts[existingKeys[0]];
+      if (!firstPath.usedInLayout) {
+        if (keyCount == 1) {
+          firstPath.position = 1;
+        }
+        position = keyCount + 1;
+        tlLogger.v('path sibling, count: $position');
+      }
+      else {
+        if (existingKeys.contains(key)) {
+          WidgetPath wp = widgetContexts[key];
+          position = wp.position;
+          tlLogger.v('Replacing logged widget: $key, position: $position');
+        }
+        else {
+          tlLogger.v('Removing $keyCount siblings(new key: $key): ...${firstPath.path.substring(max(0, firstPath.path.length - 90))}');
+          for (int eKey in existingKeys) {
+            WidgetPath wp = widgetContexts[eKey];
+            tlLogger.v('Removing $eKey, position: ${wp.position}, used: ${wp.usedInLayout}');
+            removePath(eKey);
+          }
+        }
+      }
     }
     this.key = key;
     widgetContexts[key] = this;
   }
 
-  set setParameters(Map<String, dynamic> parameters) => this.parameters = parameters;
+  String widgetPath() => (position == 0) ? path :'$path/$position';
 
-  static WidgetPath?  getPath(int key) => widgetContexts[key];
+  String? widgetDigest() {
+    if (hash && pathHash == null) {
+      pathHash = digest.convert(utf8.encode(widgetPath())).toString();
+    }
+    return pathHash;
+  }
+
+  void addParameters(Map<String, dynamic> parameters) => this.parameters.addAll(parameters);
+
+  static WidgetPath?   getPath(int key) => widgetContexts[key];
   static void          removePath(int? key) { if (key != null) widgetContexts.remove(key); }
   static bool          containsKey(int key) => widgetContexts.containsKey(key);
   static void          clear() => widgetContexts.clear();
   static int           get size => widgetContexts.length;
   static Function      removeWhere = widgetContexts.removeWhere;
-  static List<dynamic> valueList = widgetContexts.values.toList(growable: false);
-  String               get widgetPath => path;
-  String?              get widgetDigest => pathHash;
+  static List<dynamic> entryList() => widgetContexts.entries.toList(growable: false);
+  static void          clearPathCache() => pathCache.clear();
   String               makeShorter(String str) => shorten ? str.replaceAll(RegExp(reduce), '') : str;
 }
 
@@ -157,10 +204,11 @@ class _TlConfiguration {
     }
     if (_configureInformation == null) {
       if (_dataLoader == null) {
-        throw Exception("No data loader injected for configuration!");
+        throw Exception("No data loader defined for configuration!");
       }
       final String data = await _dataLoader!();
       _configureInformation = jsonDecode(data);
+      tlLogger.v('Global configuration loaded');
     }
   }
 
@@ -199,8 +247,10 @@ class _TlBinder extends WidgetsBindingObserver {
 
   static const bool createRootLayout = false;
   static const bool usePostFrame = false;
-  static const int  rapidFrameRateLimitMs = 160;
-  static const int  rapidSequenceCompleteMs = rapidFrameRateLimitMs * 2;
+
+  static int rapidFrameRateLimitMs = 160;
+  static int rapidSequenceCompleteMs = 2 * rapidFrameRateLimitMs;
+  static bool initRapidFrameRate = true;
 
   static _TlBinder? _instance;
   static List<Map<String,dynamic>>? layoutParametersForGestures;
@@ -217,16 +267,68 @@ class _TlBinder extends WidgetsBindingObserver {
   List<dynamic>? maskIds;
   List<dynamic>? maskValuePatterns;
 
+  _Swipe? scrollCapture;
+
+  void startScroll(Offset? position, Duration? timeStamp) {
+    scrollCapture = _Swipe();
+    scrollCapture?.startPosition = position ?? Offset(0,0);
+    scrollCapture?.startTimeStamp = timeStamp?? Duration();
+  }
+
+  void updateScroll(Offset? position, Duration? timeStamp) {
+    scrollCapture?.updatePosition = position ?? Offset(0,0);
+    scrollCapture?.updateTimestamp = timeStamp?? Duration();
+  }
+
+  void endScroll(Velocity? velocity) {
+    scrollCapture?.velocity = velocity?? Velocity(pixelsPerSecond: Offset(0, 0));
+    scrollCapture?.calculateSwipe();
+  }
+
+  Future<void> checkForScroll() async {
+    if (scrollCapture != null) {
+      final _Swipe swipe = scrollCapture!;
+
+      scrollCapture = null;
+
+      if (swipe.getUpdatePosition != null && swipe.velocity != null) {
+        final Offset? start = swipe.getStartPosition;
+        final Offset? end = swipe.getUpdatePosition;
+        final Velocity? velocity = swipe.velocity;
+        final String direction = swipe.direction;
+
+        tlLogger.v(
+            'Scrollable, start: ${start?.dx},${start?.dy}, end: ${end?.dx},${end?.dy}, velocity: $velocity, direction: $direction');
+
+        await PluginTealeaf.onTlGestureEvent(
+            gesture: 'swipe',
+            id: '../Scrollable',
+            target: 'Scrollable',
+            data: <String, dynamic>{
+              'pointer1': {'dx': start?.dx, 'dy': start?.dy, 'ts': swipe.getStartTimestampString()},
+              'pointer2': {'dx': end?.dx, 'dy': end?.dy, 'ts': swipe.getUpdateTimestampString()},
+              'velocity': {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
+              'direction': direction,
+            },
+            layoutParameters: _TlBinder.layoutParametersForGestures
+        );
+      }
+      else {
+        tlLogger.v('Incomplete scroll before frame');
+      }
+    }
+  }
+
   void init() {
     final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
     binding.addPersistentFrameCallback((timestamp) {
       if (usePostFrame) {
-        tlLogger.v("#### Frame handling with single PostFrame callbacks");
+        tlLogger.v("Frame handling with single PostFrame callbacks");
         handleWithPostFrameCallback(binding, timestamp);
       }
       else {
-        tlLogger.v("#### Frame handling with direct persistent callbacks");
+        tlLogger.v("Frame handling with direct persistent callbacks");
         handleScreenUpdate(timestamp);
       }
     });
@@ -251,6 +353,10 @@ class _TlBinder extends WidgetsBindingObserver {
 
   void logFrameIfChanged(WidgetsBinding binding, Duration timestamp) async {
     final Element? rootViewElement = binding.renderViewElement;
+
+    if (initRapidFrameRate) {
+      await getFrameRateConfiguration();
+    }
 
     if (initEnvironment) {
       final RenderObject? rootObject = rootViewElement?.findRenderObject();
@@ -291,8 +397,9 @@ class _TlBinder extends WidgetsBindingObserver {
       final int frameInterval = lastFrameTime == 0 ? 0: elapsed;
       final List<Map<String, dynamic>> layouts = await getAllLayouts();
 
+      WidgetPath.clearPathCache();
+      await checkForScroll();
       tlLogger.v('Logging screenview, delay: $timerDelay, wait: $waitTime, frame interval: $frameInterval, Layout count: ${layouts.length}');
-
       await PluginTealeaf.onScreenview("LOAD", timestamp, layouts);
       loggingScreen = false;
     }
@@ -316,7 +423,7 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   void handleScreenUpdate(Duration timestamp) {
-    tlLogger.v('##### Frame callback @$timestamp (widget path map size: ${WidgetPath.size})');
+    tlLogger.v('Frame callback @$timestamp (widget path map size: ${WidgetPath.size})');
 
     final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
@@ -327,16 +434,23 @@ class _TlBinder extends WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.paused:
-        tlLogger.v("###### Screenview UNLOAD");
+        scrollCapture = null;
+        tlLogger.v("Screenview UNLOAD");
         break;
       case AppLifecycleState.resumed:
-        tlLogger.v("###### Screenview VISIT");
+        tlLogger.v("Screenview VISIT");
         break;
       default:
-        tlLogger.v("###### Screenview: ${state.toString()}");
+        tlLogger.v("Screenview: ${state.toString()}");
         break;
     }
     super.didChangeAppLifecycleState(state);
+  }
+
+  Future<void> getFrameRateConfiguration() async {
+    rapidFrameRateLimitMs = await _TlConfiguration().get("GlobalScreenSettings/RapidFrameRate") ?? 160;
+    rapidSequenceCompleteMs = await _TlConfiguration().get("GlobalScreenSettings/RapidFrameDone") ?? (2 * rapidSequenceCompleteMs);
+    initRapidFrameRate = false;
   }
 
   Future<String> maskText(String text) async {
@@ -347,6 +461,9 @@ class _TlBinder extends WidgetsBindingObserver {
         final String? capitalCase = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/capitalCaseAlphabet");
         final String? symbol = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/symbol");
         final String? number = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/number");
+
+        // Note: The following r"\p{..} expressions have been flagged erroneously as errors in some versions of the IDE
+        //       However, they work fine and also do NOT show up in linter, so they do not break CI/CD
 
         if (smallCase != null) {
           text = text.replaceAll(RegExp(r"\p{Ll}", unicode: true), smallCase);
@@ -398,169 +515,163 @@ class _TlBinder extends WidgetsBindingObserver {
 
   Future<List<Map<String, dynamic>>> getAllLayouts() async {
     final List<Map<String, dynamic>> layouts = [];
-    final List<dynamic> pathList = WidgetPath.valueList;
-
+    final List<dynamic> pathList = WidgetPath.entryList();
+    final int pathCount = pathList.length;
     bool hasGestures = false;
 
     if (createRootLayout) {
       layouts.add(createRootLayoutControl());
     }
 
-    for (dynamic widgetPath in pathList) {
-      final WidgetPath wp = widgetPath as WidgetPath;
-      final Map <String, dynamic>? args = wp.parameters;
+    for (dynamic entry in pathList) {
+      final MapEntry<int, dynamic> widgetEntry = entry as MapEntry<int, dynamic>;
+      final int key = widgetEntry.key;
+      final WidgetPath wp = widgetEntry.value as WidgetPath;
+      final BuildContext? context = wp.context;
 
-      if (args != null) {
-        final String? type = args['type'];
-        final String? subType = args['subType'];
-        final BuildContext? context = wp.context;
-        final Widget? widget = context?.widget;
+      if (context == null) {
+        tlLogger.w('Context null for path (removed): ${wp.path}');
+        WidgetPath.removePath(key);
+        continue;
+      }
+      final String contextString = context.toString();
+      if (contextString.startsWith('State') && contextString.endsWith('(DEFUNCT)(no widget)')) {
+        tlLogger.v("Deleting obsolete path item: $key, context: $contextString");
+        WidgetPath.removePath(key);
+        continue;
+      }
+      final Widget widget = context.widget;
+      final Map <String, dynamic> args = wp.parameters;
+      final String? type = args['type']?? '';
+      final String? subType = args['subType']?? '';
 
-        if (type != null && type.compareTo("GestureDetector") == 0) {
-          hasGestures = true;
+      wp.usedInLayout = true;
+
+      if (type != null && type.compareTo("GestureDetector") == 0) {
+        hasGestures = true;
+      }
+      else if (subType != null) {
+        final String path = wp.widgetPath();
+        final dynamic getData = args['data'];
+        Map<String, dynamic>? aStyle;
+        Map<String, dynamic>? font;
+        Map<String, dynamic>? image;
+        String? text;
+        bool?  maskingEnabled = await getMaskingEnabled();
+
+        bool masked = maskingEnabled! && (maskIds!.contains(path) || maskIds!.contains(wp.widgetDigest()));
+
+        if (subType.compareTo("ImageView") == 0) {
+          image = await getData(widget);
+          if (image == null) {
+            tlLogger.v("Image is empty!");
+            continue;
+          }
+          tlLogger.v('Image is available: ${widget.runtimeType.toString()}');
         }
-        else if (subType != null && widget != null) {
-          final String path = wp.widgetPath;
-          final dynamic getData = args['data'];
-          Map<String, dynamic>? aStyle;
-          Map<String, dynamic>? font;
-          Map<String, dynamic>? image;
-          String? text;
-          bool?  maskingEnabled = await getMaskingEnabled();
+        else if (subType.compareTo("TextView") == 0) {
+          text = getData(widget)?? '';
 
-          bool masked = maskingEnabled! && (maskIds!.contains(wp.widgetPath) || maskIds!.contains(wp.widgetDigest));
+          final TextStyle style = args['style']?? TextStyle();
+          final TextAlign align = args['align']?? TextAlign.left;
 
-          if (subType.compareTo("ImageView") == 0) {
-            image = await getData(widget);
-            if (image == null) {
-              tlLogger.v("Image is empty!");
-              continue;
+          if (maskingEnabled && !masked && maskValuePatterns != null) {
+            for (final String pattern in maskValuePatterns!) {
+              if (text!.contains(RegExp(pattern))) {
+                masked = true;
+                tlLogger.v('Masking matched content with RE: $pattern, text: $text');
+                break;
+              }
             }
-            tlLogger.v('*** Image is available: ${widget.runtimeType.toString()}');
           }
-          else if (subType.compareTo("TextView") == 0) {
-            text = getData(widget);
-
-            final TextStyle style = args['style']?? TextStyle();
-            final TextAlign align = args['align']?? TextAlign.left;
-
-            if (maskingEnabled && !masked && maskValuePatterns != null) {
-              for (final String pattern in maskValuePatterns!) {
-                if (text!.contains(RegExp(pattern))) {
-                  masked = true;
-                  tlLogger.v('Masking matched content with RE: $pattern, text: $text');
-                  break;
-                }
-              }
+          if (masked) {
+            try {
+              text = await maskText(text!);
             }
-            if (masked) {
-              try {
-                text = await maskText(text!);
-              }
-              on TealeafException catch (te) {
-                tlLogger.v('Unable to mask text. ${te.getMsg}');
-              }
-
-              tlLogger.v("Text Layout masked text: $text, Widget: ${widget.runtimeType.toString()}, "
-                "Digest for MASKING: ${wp.widgetDigest}");
-            }
-            else {
-              tlLogger.v("Text Layout text: $text, Widget: ${widget.runtimeType.toString()}");
+            on TealeafException catch (te) {
+              tlLogger.v('Unable to mask text. ${te.getMsg}');
             }
 
-            font = {
-              'family': style.fontFamily,
-              'size': style.fontSize.toString(),
-              'bold': (FontWeight.values.indexOf(style.fontWeight!) > FontWeight.values.indexOf(FontWeight.normal)).toString(),
-              'italic': (style.fontStyle == FontStyle.italic).toString()
-            };
-
-            double top = 0, bottom = 0, left = 0, right = 0;
-
-            if (wp.parent!.widget is Padding) {
-              final Padding padding = wp.parent!.widget as Padding;
-              if (padding.padding is EdgeInsets) {
-                final EdgeInsets eig = padding.padding as EdgeInsets;
-                top = eig.top;
-                bottom = eig.bottom;
-                left = eig.left;
-                right = eig.right;
-              }
-            }
-
-            aStyle = {
-              'textColor': (style.color!.value & 0xFFFFFF).toString(),
-              'textAlphaColor': (style.color?.alpha ?? 0).toString(),
-              'textAlphaBGColor': (style.backgroundColor?.alpha ?? 0).toString(),
-              'textAlign': align.toString().split('.').last,
-              'paddingBottom': bottom.toInt().toString(),
-              'paddingTop': top.toInt().toString(),
-              'paddingLeft': left.toInt().toString(),
-              'paddingRight': right.toInt().toString(),
-              'hidden': (style.color!.opacity == 1.0).toString(),
-              'colorPrimary': (style.foreground?.color ?? 0).toString(),
-              'colorPrimaryDark': 0.toString(), // TBD: Dark theme??
-              'colorAccent': (style.decorationColor?.value ?? 0).toString(), // TBD: are this the same??
-            };
+            tlLogger.v("Text Layout masked text: $text, Widget: ${widget.runtimeType.toString()}, "
+              "Digest for MASKING: ${wp.widgetDigest()}");
+          }
+          else {
+            tlLogger.v("Text Layout text: $text, Widget: ${widget.runtimeType.toString()}");
           }
 
-          final RenderBox box = context!.findRenderObject() as RenderBox;
-          final Offset position = box.localToGlobal(Offset.zero);
+          font = {
+            'family': style.fontFamily,
+            'size': style.fontSize.toString(),
+            'bold': (FontWeight.values.indexOf(style.fontWeight!) > FontWeight.values.indexOf(FontWeight.normal)).toString(),
+            'italic': (style.fontStyle == FontStyle.italic).toString()
+          };
 
-          if (image != null) {
-            tlLogger.v("Adding image to layouts....");
+          double top = 0, bottom = 0, left = 0, right = 0;
+
+          if (wp.parent!.widget is Padding) {
+            final Padding padding = wp.parent!.widget as Padding;
+            if (padding.padding is EdgeInsets) {
+              final EdgeInsets eig = padding.padding as EdgeInsets;
+              top = eig.top;
+              bottom = eig.bottom;
+              left = eig.left;
+              right = eig.right;
+            }
           }
-          tlLogger.v('*#* Layout Flutter -- x: ${position.dx}, y: ${position.dy}, width: ${box.size.width.toInt()}, text: $text');
 
-          layouts.add(<String, dynamic>{
-            'id': path,
-            'cssId': wp.widgetDigest,
-            'idType': (-4).toString(),
-            'tlType': (image != null) ? 'image' : (text!.contains('\n') ? 'textArea' : 'label'),
-            'type': type,
-            'subType': subType,
-            'position': <String, String>{
-              'x': position.dx.toInt().toString(),
-              'y': position.dy.toInt().toString(),
-              'width': box.size.width.toInt().toString(),
-              'height': box.size.height.toInt().toString(),
-            },
-            'zIndex': "501",
-            if (text != null) 'currState': <String, dynamic>{
-              'text': text,
-              'placeHolder': "", // TBD??
-              'font': font
-            },
-            if (image != null)  'image' : image,
-            if (aStyle != null) 'style' : aStyle,
-            'originalId': path.replaceAll("/", ""),
-            'masked': '$masked'
-          });
+          aStyle = {
+            'textColor': (style.color!.value & 0xFFFFFF).toString(),
+            'textAlphaColor': (style.color?.alpha ?? 0).toString(),
+            'textAlphaBGColor': (style.backgroundColor?.alpha ?? 0).toString(),
+            'textAlign': align.toString().split('.').last,
+            'paddingBottom': bottom.toInt().toString(),
+            'paddingTop': top.toInt().toString(),
+            'paddingLeft': left.toInt().toString(),
+            'paddingRight': right.toInt().toString(),
+            'hidden': (style.color!.opacity == 1.0).toString(),
+            'colorPrimary': (style.foreground?.color ?? 0).toString(),
+            'colorPrimaryDark': 0.toString(), // TBD: Dark theme??
+            'colorAccent': (style.decorationColor?.value ?? 0).toString(), // TBD: are this the same??
+          };
         }
+
+        final RenderBox box = context.findRenderObject() as RenderBox;
+        final Offset position = box.localToGlobal(Offset.zero);
+
+        if (image != null) {
+          tlLogger.v("Adding image to layouts....");
+        }
+        tlLogger.v('--> Layout Flutter -- x: ${position.dx}, y: ${position.dy}, width: ${box.size.width.toInt()}, text: $text');
+
+        layouts.add(<String, dynamic>{
+          'id': path,
+          'cssId': wp.widgetDigest(),
+          'idType': (-4).toString(),
+          'tlType': (image != null) ? 'image' : (text != null && text.contains('\n') ? 'textArea' : 'label'),
+          'type': type,
+          'subType': subType,
+          'position': <String, String>{
+            'x': position.dx.toInt().toString(),
+            'y': position.dy.toInt().toString(),
+            'width': box.size.width.toInt().toString(),
+            'height': box.size.height.toInt().toString(),
+          },
+          'zIndex': "501",
+          'currState': <String, dynamic>{
+            'text': text,
+            'placeHolder': "", // TBD??
+            'font': font
+          },
+          if (image != null)  'image' : image,
+          if (aStyle != null) 'style' : aStyle,
+          'originalId': path.replaceAll("/", ""),
+          'masked': '$masked'
+        });
       }
     }
-    tlLogger.v('*#* Number of layouts to log: ${layouts.length}');
     layoutParametersForGestures = hasGestures ? List.unmodifiable(layouts) : null;
 
-    tlLogger.v("Size of widget path cache before removing text objects: ${WidgetPath.size}");
-
-    WidgetPath.removeWhere((key, value) {
-      final WidgetPath wp = value as WidgetPath;
-      final String subType = wp.parameters == null ? "" : wp.parameters!['subType']?? "";
-      if (subType.compareTo("TextView") == 0) {
-        return true;
-      }
-      // Images are immutable, so they are reused, even while waiting for the image data
-      // to appear. When the data is available, a setState causes a redraw and that is the frame
-      // that has the image data!
-      if (subType.compareTo("ImageView") == 0 && wp.parameters?['image'] != null) {
-        tlLogger.v("Removing image and adding to layout!!!");
-        return true;
-      }
-      return false;
-    });
-
-    tlLogger.v("Cache after: ${WidgetPath.size}, # of layouts: ${layouts.length}");
+    tlLogger.v("WigetPath cache size, before: $pathCount, after: ${WidgetPath.size}, # of layouts: ${layouts.length}");
 
     return layouts;
   }
@@ -601,17 +712,22 @@ class _Swipe {
 
   Offset? _startPosition;
   Offset? _updatePosition;
-  Duration? _startTimestamp;
-  Duration? _updateTimestamp;
+  Duration _startTimestamp  = Duration();
+  Duration _updateTimestamp = Duration();
+  Velocity? _velocity = Velocity(pixelsPerSecond: const Offset(0,0));
+  String _direction = "";
 
   set startPosition(Offset position) => _startPosition = position;
   set startTimeStamp(Duration ts) => _startTimestamp = ts;
   set updatePosition(Offset position) => _updatePosition = position;
   set updateTimestamp(Duration ts) => _updateTimestamp = ts;
+  set velocity(Velocity? v) => _velocity = v;
   Offset? get getStartPosition => _startPosition;
   Offset? get getUpdatePosition => _updatePosition;
-  String getStartTimestampString() => _startTimestamp!.inMilliseconds.toString();
-  String getUpdateTimestampString() => _updateTimestamp!.inMilliseconds.toString();
+  Velocity? get velocity => _velocity!;
+  String get direction => _direction;
+  String getStartTimestampString() => _startTimestamp.inMilliseconds.toString();
+  String getUpdateTimestampString() => _updateTimestamp.inMilliseconds.toString();
 
   String calculateSwipe() {
     if (_startPosition == null || _updatePosition == null) {
@@ -624,7 +740,7 @@ class _Swipe {
   String _getSwipeDirection(Offset offset) {
     final int axis = offset.dx.abs() < offset.dy.abs() ? 2 : 0;
     final int direction = (axis == 0) ? (offset.dx < 0 ? 1 : 0) : (offset.dy < 0 ? 1 : 0);
-    return directions[axis + direction];
+    return (_direction = directions[axis + direction]);
   }
 }
 
@@ -643,6 +759,13 @@ class TealeafAopInstrumentation {
   static const String _onScaleUpdate = "onScaleUpdate";
   static const String _onScaleEnd    = "onScaleEnd";
 
+  static const String _onVerticalDragStart    = "onVerticalDragStart";
+  static const String _onVerticalDragUpdate   = "onVerticalDragUpdate";
+  static const String _onVerticalDragEnd      = "onVerticalDragEnd";
+  static const String _onHorizontalDragStart  = "onHorizontalDragStart";
+  static const String _onHorizontalDragUpdate = "onHorizontalDragUpdate";
+  static const String _onHorizontalDragEnd    = "onHorizontalDragEnd";
+
   /* Example ONLY of field instrumentation
   @pragma("vm:entry-point")
   @FieldGet('dart:io', 'Platform', 'isAndroid', true)
@@ -656,12 +779,38 @@ class TealeafAopInstrumentation {
   @pragma("vm:entry-point")
   static void _xxxTealeaf6(PointCut pointcut) {
     TimeIt(label: 'runApp Injection').execute(() {
+      final dynamic rootWidget = pointcut.positionalParams?[0];
+
       FlutterError.onError = wrap(FlutterError.onError, "Flutter onError");
 
       _TlBinder().init();
-      catchForLogging(pointcut.positionalParams?[0]?? const Text("The main app widget is null!"));
+      catchForLogging(rootWidget?? const Text("The main app widget is null!"));
 
-      tlLogger.v("!!! exit runApp replacement hook");
+      // Create watcher for scroll notifications to map to a swipe event (from top of render tree)
+      pointcut.positionalParams?[0] = NotificationListener(
+        child: rootWidget,
+        onNotification: (Notification? notification) {
+          if (notification is ScrollStartNotification) {
+            final ScrollStartNotification scrollStartNotification = notification;
+            final DragStartDetails? details = scrollStartNotification.dragDetails;
+            _TlBinder().startScroll(details?.globalPosition, details?.sourceTimeStamp);
+          }
+          else if (notification is ScrollUpdateNotification) {
+            final ScrollUpdateNotification scrollUpdateNotification = notification;
+            final DragUpdateDetails? details = scrollUpdateNotification.dragDetails;
+            _TlBinder().updateScroll(details?.globalPosition, details?.sourceTimeStamp);
+          }
+          else if (notification is ScrollEndNotification) {
+            final ScrollEndNotification scrollEndNotification = notification;
+            final DragEndDetails? details = scrollEndNotification.dragDetails;
+            _TlBinder().endScroll(details?.velocity);
+            tlLogger.v('Scroll notification completed');
+          }
+          return false;
+        },
+      );
+      pointcut.proceed();
+      tlLogger.v("Exit runApp replacement hook");
     });
   }
 
@@ -675,7 +824,8 @@ class TealeafAopInstrumentation {
           textHelper(pointcut, (widget) => widget.data ?? (widget.textSpan != null ? widget.textSpan.toPlainText() : ""));
         }
         return timer.execute(() => pointcut.proceed(), label: "Text build only");
-      });
+      },
+      label: "Total time for text build");
     }
     finally {
       timer.showResults();
@@ -706,8 +856,8 @@ class TealeafAopInstrumentation {
     try {
       return timer.execute(() {
         final dynamic tfs = pointcut.target;
-        final dynamic widget = tfs.widget;
-        if (widget is TextField) {
+        final dynamic tfWidget = tfs.widget;
+        if (tfWidget is TextField) {
           textHelper(pointcut, (widget) {
             try {
               String text = widget.controller.text;
@@ -731,47 +881,64 @@ class TealeafAopInstrumentation {
     }
   }
 
+  // TBD: Remove if TextField types deemed redundant because they incorporate a Text() object
   @Execute("package:flutter/src/cupertino/text_field.dart", "CupertinoTextField", "-build")
   @pragma("vm:entry-point")
   dynamic _xxxTealeaf10(PointCut pointcut) {
   }
 
-  static void textHelper(PointCut pointcut, Function getText) async {
-    final BuildContext bc = pointcut.positionalParams?[0];
-    final dynamic target = pointcut.target;
-    final Widget widget = (target is Widget) ? target : target.widget;
+  @Call("package:flutter/src/material/selectable_text.dart", "_SelectableTextState", "+_SelectableTextState")
+  @pragma("vm:entry-point")
+  static dynamic _xxxTealeaf11(PointCut pointcut) {
+    final TimeIt timer = TimeIt();
+    try {
+      return timer.execute(() {
+        dynamic tfs = timer.execute(() => pointcut.proceed(), label: "_SelectableTextState Constructor");
+        tfs.forcePressEnabled = false; // Initialize "late" variable (always reset in build)
+        return tfs;
+      },
+      label: "Total including setting late variable");
+    }
+    finally {
+      timer.showResults();
+    }
+  }
 
-    tlLogger.v('Text widget: ${widget.runtimeType.toString()}, context: ${bc.toString()}');
+  @Execute("package:flutter/src/material/selectable_text.dart", "_SelectableTextState", "-build")
+  @pragma("vm:entry-point")
+  dynamic _xxxTealeaf12(PointCut pointcut) {
+    final TimeIt timer = TimeIt(label: "SelectableText Injection: (${pointcut.target.toString()}");
+    try {
+      return timer.execute(() {
+        final dynamic sts = pointcut.target;
+        final dynamic stWidget = sts.widget;
 
-    final TextStyle style = pointcut.members?['style']?? DefaultTextStyle.of(bc).style?? TextStyle();
-    final TextAlign textAlign = pointcut.members?['textAlign']?? DefaultTextStyle.of(bc).textAlign?? TextAlign.left;
-    final WidgetPath wc = WidgetPath.create(bc, shorten: true, hash: true);
-
-    wc.addInstance(widget.hashCode);
-
-    wc.setParameters = <String, dynamic> {
-      'type':    widget.runtimeType.toString(),
-      'subType': 'TextView',
-      'data':    getText,
-      'style':   style,
-      'align':   textAlign
-    };
+        if (stWidget is SelectableText) {
+          textHelper(pointcut, (widget) => widget.data ?? (widget.textSpan != null ? widget.textSpan.toPlainText() : ""));
+        }
+        return timer.execute(() => pointcut.proceed(), label: "SelectableText build only");
+      },
+      label: "Total time for selectable text build");
+    }
+    finally {
+      timer.showResults();
+    }
   }
 
   @pragma("vm:entry-point")
   @Execute("package:flutter/src/widgets/image.dart", "_ImageState", "-_handleImageFrame")
-  dynamic _xxxTealeaf12(PointCut pointcut) {
+  dynamic _xxxTealeaf13(PointCut pointcut) {
     final TimeIt timer = TimeIt(label: 'Image Injection for ready handler');
     try {
       return timer.execute(() {
         final dynamic target = pointcut.target;
         final Widget widget = (target is Widget) ? target : target.widget;
-        final WidgetPath? wc = WidgetPath.getPath(widget.hashCode);
+        final WidgetPath? wp = WidgetPath.getPath(widget.hashCode);
 
-        if (wc != null) {
+        if (wp != null) {
           final ImageInfo imageInfo = pointcut.positionalParams?[0];
-          wc.parameters?['image'] = imageInfo.image;
-          tlLogger.v('*** _ImageState._handleImageFrame. Widget hash: ${widget.hashCode}, image: ${wc.parameters?['image']}');
+          wp.parameters['image'] = imageInfo.image;
+          tlLogger.v('_ImageState._handleImageFrame. Widget hash: ${widget.hashCode}, image: ${wp.parameters['image']}');
         }
         timer.execute(() => pointcut.proceed(), label: 'Set image handler');
       });
@@ -783,7 +950,7 @@ class TealeafAopInstrumentation {
 
   @Execute("package:flutter/src/widgets/image.dart", "_ImageState", "-build")
   @pragma("vm:entry-point")
-  dynamic _xxxTealeaf13(PointCut pointcut) {
+  dynamic _xxxTealeaf14(PointCut pointcut) {
     final timer = TimeIt(label: 'Image Injection build');
     try {
       return timer.execute(() {
@@ -795,16 +962,18 @@ class TealeafAopInstrumentation {
 
         final dynamic build = timer.execute(() => pointcut.proceed(), label: 'Image build only');
 
-        final WidgetPath wc = WidgetPath.create(bc, shorten: true, hash: true);
+        final WidgetPath? cp = WidgetPath.getPath(widget.hashCode);
+        final WidgetPath  wp = WidgetPath.create(bc, hash: true);
 
-        wc.addInstance(widget.hashCode);
+        wp.addInstance(widget.hashCode);
 
-        wc.setParameters = <String, dynamic>{
+        wp.addParameters(<String, dynamic>{
+          if (cp != null && cp.parameters.containsKey('image')) 'image': cp.parameters['image'],
           'type': widget.runtimeType.toString(),
           'subType': 'ImageView',
           'data': (widget) async {
-            tlLogger.v('_ImageState class: ${target.toString()}, hash: ${wc.key}');
-            final dynamic image = wc.parameters?['image'];
+            tlLogger.v('_ImageState class: ${target.toString()}, hash: ${wp.key}');
+            final dynamic image = wp.parameters['image'];
             if (image != null) {
               Uint8List data = Uint8List(1);
               final bool useImageData = await _TlConfiguration().get('TealeafBasicConfig/GetImageDataOnScreenLayout')?? false;
@@ -814,7 +983,7 @@ class TealeafAopInstrumentation {
               }
               final String width = '${image.width}';
               final String height = '${image.height}';
-              tlLogger.v('*#* Image: # of bytes: ${data.length}, w: $width, h: $height, widget: ${widget.runtimeType.toString()}');
+              tlLogger.v('--> Image: # of bytes: ${data.length}, w: $width, h: $height, widget: ${widget.runtimeType.toString()}');
               return <String, dynamic>{
                 'base64Image': data,
                 'value': '',
@@ -826,7 +995,7 @@ class TealeafAopInstrumentation {
             }
             return null;
           },
-        };
+        });
         return build;
       });
     }
@@ -925,17 +1094,18 @@ class TealeafAopInstrumentation {
     try {
       return timer.execute(() {
         final Map<dynamic, dynamic> params = pointcut.namedParams!;
-        final Widget child = params['child'];
+        final Widget? child = params['child'];
+        final String childType = (child != null) ? child.runtimeType.toString() : '<no child>';
+        final String childCode = (child != null) ? '${child.hashCode}' : '0';
         Widget? gesture; // Note: this is set AFTER it is referenced in callback. On callback, the value has been set!
 
-        tlLogger.v('Gesture constructor child widget: ${child.runtimeType.toString()}, child hash: ${child.hashCode}');
+        tlLogger.v('Gesture constructor child widget: $childType, child hash: $childCode');
 
         // Simple gestures
-
         if (params.containsKey(_tap)) {
           final GestureTapCallback? userCallback = params[_tap];
           params[_tap] = () {
-            gestureHelper(gesture: gesture!, gestureType: 'tap');
+            gestureHelper(gesture: gesture, gestureType: 'tap');
             if (userCallback != null) {
               userCallback();
             }
@@ -944,7 +1114,7 @@ class TealeafAopInstrumentation {
         if (params.containsKey(_doubleTap)) {
           final GestureDoubleTapCallback? userCallback = params[_doubleTap];
           params[_doubleTap] = () {
-            gestureHelper(gesture: gesture!, gestureType: 'doubletap');
+            gestureHelper(gesture: gesture, gestureType: 'doubletap');
             if (userCallback != null) {
               userCallback();
             }
@@ -953,30 +1123,30 @@ class TealeafAopInstrumentation {
         if (params.containsKey(_longPress)) {
           final GestureLongPressCallback? userCallback = params[_longPress];
           params[_longPress] = () {
-            gestureHelper(gesture: gesture!, gestureType: 'taphold');
+            gestureHelper(gesture: gesture, gestureType: 'taphold');
             if (userCallback != null) {
               userCallback();
             }
           };
         }
-          // Complex gestures
+        // Complex gestures
         if (params.containsKey(_onPanStart)) {
           final dynamic userCallback = params[_onPanStart];
           params[_onPanStart] = (DragStartDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture!, onType: _onPanStart, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(gesture: gesture, onType: _onPanStart, offset: position, timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
           };
         }
         if (params.containsKey(_onPanUpdate)) {
-          final dynamic userCallback = params[_onPanUpdate];
-          params[_onPanUpdate] = (DragUpdateDetails details) {
+        final dynamic userCallback = params[_onPanUpdate];
+        params[_onPanUpdate] = (DragUpdateDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture!, onType: _onPanUpdate, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(gesture: gesture, onType: _onPanUpdate, offset: position, timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -986,7 +1156,72 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onPanEnd];
           params[_onPanEnd] = (DragEndDetails details) {
             final Velocity velocity = details.velocity;
-            swipeGestureHelper(gesture: gesture!, onType: _onPanEnd, velocity: velocity);
+            swipeGestureHelper(gesture: gesture, onType: _onPanEnd, velocity: velocity);
+            if (userCallback != null) {
+              userCallback(details);
+            }
+          };
+        }
+        // Horizontal/Vertical drags versions of pan
+        if (params.containsKey(_onHorizontalDragStart)) {
+          final dynamic userCallback = params[_onHorizontalDragStart];
+          params[_onHorizontalDragStart] = (DragStartDetails details) {
+            final Offset position = details.globalPosition;
+            final Duration? timestamp = details.sourceTimeStamp;
+            swipeGestureHelper(gesture: gesture, onType: _onHorizontalDragStart, offset: position, timestamp: timestamp!);
+            if (userCallback != null) {
+              userCallback(details);
+            }
+          };
+        }
+        if (params.containsKey(_onHorizontalDragUpdate)) {
+          final dynamic userCallback = params[_onHorizontalDragUpdate];
+          params[_onHorizontalDragUpdate] = (DragUpdateDetails details) {
+            final Offset position = details.globalPosition;
+            final Duration? timestamp = details.sourceTimeStamp;
+            swipeGestureHelper(gesture: gesture, onType: _onHorizontalDragUpdate, offset: position, timestamp: timestamp!);
+            if (userCallback != null) {
+              userCallback(details);
+            }
+          };
+        }
+        if (params.containsKey(_onHorizontalDragEnd)) {
+          final dynamic userCallback = params[_onHorizontalDragEnd];
+          params[_onHorizontalDragEnd] = (DragEndDetails details) {
+            final Velocity velocity = details.velocity;
+            swipeGestureHelper(gesture: gesture, onType: _onHorizontalDragEnd, velocity: velocity);
+            if (userCallback != null) {
+              userCallback(details);
+            }
+          };
+        }
+        if (params.containsKey(_onVerticalDragStart)) {
+          final dynamic userCallback = params[_onVerticalDragStart];
+          params[_onVerticalDragStart] = (DragStartDetails details) {
+            final Offset position = details.globalPosition;
+            final Duration? timestamp = details.sourceTimeStamp;
+            swipeGestureHelper(gesture: gesture, onType: _onVerticalDragStart, offset: position, timestamp: timestamp!);
+            if (userCallback != null) {
+              userCallback(details);
+            }
+          };
+        }
+        if (params.containsKey(_onVerticalDragUpdate)) {
+          final dynamic userCallback = params[_onVerticalDragUpdate];
+          params[_onVerticalDragUpdate] = (DragUpdateDetails details) {
+            final Offset position = details.globalPosition;
+            final Duration? timestamp = details.sourceTimeStamp;
+            swipeGestureHelper(gesture: gesture, onType: _onVerticalDragUpdate, offset: position, timestamp: timestamp!);
+            if (userCallback != null) {
+              userCallback(details);
+            }
+          };
+        }
+        if (params.containsKey(_onVerticalDragEnd)) {
+          final dynamic userCallback = params[_onVerticalDragEnd];
+          params[_onVerticalDragEnd] = (DragEndDetails details) {
+            final Velocity velocity = details.velocity;
+            swipeGestureHelper(gesture: gesture, onType: _onVerticalDragEnd, velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -995,8 +1230,8 @@ class TealeafAopInstrumentation {
         if (params.containsKey(_onScaleStart)) {
           final dynamic userCallback = params[_onScaleStart];
           params[_onScaleStart] = (ScaleStartDetails details) {
-            final Offset position  = details.focalPoint;
-            pinchGestureHelper(gesture: gesture!, onType: _onScaleStart, offset:position);
+            final Offset position = details.focalPoint;
+            pinchGestureHelper(gesture: gesture, onType: _onScaleStart, offset: position);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1008,9 +1243,13 @@ class TealeafAopInstrumentation {
             final Offset position = details.focalPoint;
             final double scale = details.scale;
             final int fingers = details.pointerCount;
-            tlLogger.v('&&& ScaleUpdate, scale: $scale, fingers: $fingers');
+            tlLogger.v('ScaleUpdate, scale: $scale, fingers: $fingers');
 
-            pinchGestureHelper(gesture: gesture!, onType: _onScaleUpdate, scale: scale, fingers: fingers, offset: position);
+            pinchGestureHelper(gesture: gesture,
+                onType: _onScaleUpdate,
+                scale: scale,
+                fingers: fingers,
+                offset: position);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1021,7 +1260,7 @@ class TealeafAopInstrumentation {
           params[_onScaleEnd] = (ScaleEndDetails details) {
             final int fingers = details.pointerCount;
             final Velocity velocity = details.velocity;
-            pinchGestureHelper(gesture: gesture!, onType: _onScaleEnd, fingers: fingers, velocity: velocity);
+            pinchGestureHelper(gesture: gesture, onType: _onScaleEnd, fingers: fingers, velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1067,14 +1306,14 @@ class TealeafAopInstrumentation {
                 onTertiaryLongPressUp: params['onTertiaryLongPressUp'],
                 onTertiaryLongPressEnd: params['onTertiaryLongPressEnd'],
                 onVerticalDragDown: params['onVerticalDragDown'],
-                onVerticalDragStart: params['onVerticalDragStart'],
-                onVerticalDragUpdate: params['onVerticalDragUpdate'],
-                onVerticalDragEnd: params['onVerticalDragEnd'],
-                onVerticalDragCancel: params['nVerticalDragCancel'],
+                onVerticalDragStart: params[_onVerticalDragStart],
+                onVerticalDragUpdate: params[_onVerticalDragUpdate],
+                onVerticalDragEnd: params[_onVerticalDragEnd],
+                onVerticalDragCancel: params['onVerticalDragCancel'],
                 onHorizontalDragDown: params['onHorizontalDragDown'],
-                onHorizontalDragStart: params['onHorizontalDragStart'],
-                onHorizontalDragUpdate: params['onHorizontalDragUpdate'],
-                onHorizontalDragEnd: params['onHorizontalDragEnd'],
+                onHorizontalDragStart: params[_onHorizontalDragStart],
+                onHorizontalDragUpdate: params[_onHorizontalDragUpdate],
+                onHorizontalDragEnd: params[_onHorizontalDragEnd],
                 onHorizontalDragCancel: params['onHorizontalDragCancel'],
                 onForcePressStart: params['onForcePressStart'],
                 onForcePressPeak: params['onForcePressPeak'],
@@ -1085,17 +1324,23 @@ class TealeafAopInstrumentation {
                 onPanUpdate: params[_onPanUpdate],
                 onPanEnd: params[_onPanEnd],
                 onPanCancel: params['onPanCancel'],
-                onScaleStart: params['onScaleStart'],
-                onScaleUpdate: params['onScaleUpdate'],
-                onScaleEnd: params['onScaleEnd'],
+                onScaleStart: params[_onScaleStart],
+                onScaleUpdate: params[_onScaleUpdate],
+                onScaleEnd: params[_onScaleEnd],
                 behavior: params['behavior'],
-                excludeFromSemantics: params[''] ?? false,
+                excludeFromSemantics: params['excludeFromSemantics'] ?? false,
                 dragStartBehavior: params['dragStartBehavior'] ?? DragStartBehavior.start
             ),
             label: 'GestureDetector Constructor'
         );
-        tlLogger.v('@@@ Gesture class created: ${gesture.hashCode}');
-
+        tlLogger.v('--> Gesture class created: ${gesture.hashCode}');
+        for (dynamic key in params.keys) {
+          // Add simple logging for all passed gestures in case we have no instrumentation for that callback
+          final String keyString = key as String;
+          if (keyString.startsWith('on')) {
+            tlLogger.v('Gesture handler parameter: $keyString');
+          }
+        }
         return gesture;
       });
     }
@@ -1110,14 +1355,14 @@ class TealeafAopInstrumentation {
     final TimeIt timer = TimeIt(label: 'GestureDetector Injection build');
     try {
       return timer.execute(() {
-        Widget? w = pointcut.target as Widget;
-        tlLogger.v('Build WIDGET: ${w.runtimeType.toString()} ${w.hashCode}');
-        final BuildContext b = pointcut.positionalParams?[0];
-        final WidgetPath wc = WidgetPath.create(b, shorten: true, hash: true);
+        Widget? widget = pointcut.target as Widget;
+        tlLogger.v('GestureDetector Build WIDGET: ${widget.runtimeType.toString()} ${widget.hashCode}');
+        final BuildContext bc = pointcut.positionalParams?[0];
+        final WidgetPath   wp = WidgetPath.create(bc, hash: true);
 
-        wc.addInstance(w.hashCode);
+        wp.addInstance(widget.hashCode);
 
-        wc.setParameters = <String, dynamic>{ 'type': w.runtimeType.toString()};
+        wp.addParameters(<String, dynamic>{ 'type': widget.runtimeType.toString()});
         return timer.execute(() => pointcut.proceed(), label: 'GestureDetector build');
       });
     }
@@ -1126,39 +1371,61 @@ class TealeafAopInstrumentation {
     }
   }
 
-   @Call("package:tl_flutter_plugin/tl_flutter_plugin.dart", "PluginTealeaf", "+aspectdTest")
-   @pragma("vm:entry-point")
-   static bool _xxxTealeaf5(PointCut pointcut) {
-     tlLogger.v('[AspectD test]: call method return value modified false => true (AOP TEST)');
-     return true;
-   }
+  @Call("package:tl_flutter_plugin/tl_flutter_plugin.dart", "PluginTealeaf", "+aspectdTest")
+  @pragma("vm:entry-point")
+  static bool _xxxTealeaf5(PointCut pointcut) {
+    tlLogger.v('[AspectD test]: call method return value modified false => true (AOP TEST)');
+    return true;
+  }
 
-   static void pointerEventHelper(String action, PointerEvent pe) {
-     final String json = jsonEncode(pe, toEncodable: encodeJsonPointerEvent);
-     final Map<String, dynamic> fields = jsonDecode(json);
+  static void textHelper(PointCut pointcut, Function getText) async {
+    final BuildContext bc = pointcut.positionalParams?[0];
+    final dynamic target = pointcut.target;
+    final Widget widget = (target is Widget) ? target : target.widget;
 
-     tlLogger.v("My PointerEvent $action TRAP!");
+    tlLogger.v('Text widget type: ${widget.runtimeType.toString()}, context: ${bc.toString()}');
 
-     if (fields.containsKey('timestamp')) {
-       fields['timestamp'] = fields['timestamp'].toString();
-     }
-     fields['action'] = action;
-     PluginTealeaf.onTlPointerEvent(fields: fields);
-   }
+    final TextStyle style = pointcut.members?['style']?? DefaultTextStyle.of(bc).style?? TextStyle();
+    final TextAlign textAlign = pointcut.members?['textAlign']?? DefaultTextStyle.of(bc).textAlign?? TextAlign.left;
+    final WidgetPath wp = WidgetPath.create(bc, hash: true);
 
-   static Map<String, dynamic> errorDetailsHelper(FlutterErrorDetails fed, String type) {
-     final Map<String, dynamic> data = {};
-     final String errorString = fed.exception.runtimeType.toString();
+    wp.addInstance(widget.hashCode);
 
-     data["name"] = errorString;
-     data["message"] = fed.toStringShort();
-     data["stacktrace"] = fed.stack.toString();
-     data["handled"] = true;
+    wp.addParameters(<String, dynamic> {
+      'type':    widget.runtimeType.toString(),
+      'subType': 'TextView',
+      'data':    getText,
+      'style':   style,
+      'align':   textAlign
+    });
+  }
 
-     tlLogger.v("!!! Flutter exception, type: $type, class: $errorString, hash: ${fed.exception.hashCode}");
+  static void pointerEventHelper(String action, PointerEvent pe) {
+    final String json = jsonEncode(pe, toEncodable: encodeJsonPointerEvent);
+    final Map<String, dynamic> fields = jsonDecode(json);
 
-     return data;
-   }
+    tlLogger.v("My PointerEvent $action TRAP!");
+
+    if (fields.containsKey('timestamp')) {
+      fields['timestamp'] = fields['timestamp'].toString();
+    }
+    fields['action'] = action;
+    PluginTealeaf.onTlPointerEvent(fields: fields);
+  }
+
+  static Map<String, dynamic> errorDetailsHelper(FlutterErrorDetails fed, String type) {
+    final Map<String, dynamic> data = {};
+    final String errorString = fed.exception.runtimeType.toString();
+
+    data["name"] = errorString;
+    data["message"] = fed.toStringShort();
+    data["stacktrace"] = fed.stack.toString();
+    data["handled"] = true;
+
+    tlLogger.v("!!! Flutter exception, type: $type, class: $errorString, hash: ${fed.exception.hashCode}");
+
+    return data;
+  }
 
   static Object? encodeJsonPointerEvent(Object? value) {
     Map<String, dynamic> map = {};
@@ -1246,33 +1513,37 @@ class TealeafAopInstrumentation {
     });
   }
 
-  static String getGestureTarget(WidgetPath wc) {
-    final dynamic widget = wc.context!.widget;
+  static String getGestureTarget(WidgetPath wp) {
+    final dynamic widget = wp.context!.widget;
     String gestureTarget;
 
     try {
       gestureTarget = widget.child.runtimeType.toString();
     }
     on NoSuchMethodError {
-      gestureTarget = wc.parentWidgetType!;
+      gestureTarget = wp.parentWidgetType!;
     }
     return gestureTarget;
   }
 
   static void gestureHelper({Widget? gesture, String? gestureType}) async {
+    if (gesture == null) {
+      tlLogger.w('Warning: Gesture is null in gestureHelper, type: ${gestureType?? "<NONE>"}');
+      return;
+    }
     final int hashCode = gesture.hashCode;
 
     if (WidgetPath.containsKey(hashCode)) {
-      final WidgetPath? wc = WidgetPath.getPath(hashCode);
-      final BuildContext? context = wc!.context;
-      final String gestureTarget = getGestureTarget(wc);
+      final WidgetPath? wp = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wp!.context;
+      final String gestureTarget = getGestureTarget(wp);
 
-      tlLogger.v('@@@ ${gestureType!.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
-      tlLogger.v('--> Path: ${wc.widgetPath}, digest: ${wc.widgetDigest}');
+      tlLogger.v('${gestureType!.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v('--> Path: ${wp.widgetPath()}, digest: ${wp.widgetDigest()}');
 
       await PluginTealeaf.onTlGestureEvent(
         gesture: gestureType,
-        id: wc.widgetPath,
+        id: wp.widgetPath(),
         target: gestureTarget,
         layoutParameters: _TlBinder.layoutParametersForGestures
       );
@@ -1282,44 +1553,48 @@ class TealeafAopInstrumentation {
     }
   }
 
-  static void swipeGestureHelper({required Widget gesture, required String onType, Offset? offset, Duration? timestamp, Velocity? velocity}) async {
+  static void swipeGestureHelper({required Widget? gesture, required String onType, Offset? offset, Duration? timestamp, Velocity? velocity}) async {
+    if (gesture == null) {
+      tlLogger.w('Warning: Gesture is null in swipeGestureHelper');
+      return;
+    }
     final int hashCode = gesture.hashCode;
 
     if (WidgetPath.containsKey(hashCode)) {
-      final WidgetPath? wc = WidgetPath.getPath(hashCode);
-      final BuildContext? context = wc!.context;
-      final String gestureTarget = getGestureTarget(wc);
+      final WidgetPath? wp = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wp!.context;
+      final String gestureTarget = getGestureTarget(wp);
 
-      tlLogger.v('@@@ ${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
-      tlLogger.v('--> Path: ${wc.widgetPath}, digest: ${wc.widgetDigest}');
+      tlLogger.v('${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v('--> Path: ${wp.widgetPath()}, digest: ${wp.widgetDigest()}');
 
       switch (onType) {
-        case _onPanStart: {
+        case _onPanStart: case _onHorizontalDragStart: case _onVerticalDragStart: {
           final _Swipe swipe = _Swipe();
           swipe.startPosition = offset!;
           swipe.startTimeStamp = timestamp!;
-          wc.setParameters = <String, dynamic> {'swipe' : swipe};
+          wp.addParameters(<String, dynamic> {'swipe' : swipe});
           break;
         }
-        case _onPanUpdate: {
-          if (wc.parameters != null && wc.parameters!.containsKey('swipe')) {
-            final _Swipe swipe = wc.parameters?['swipe'];
+        case _onPanUpdate: case _onHorizontalDragUpdate: case _onVerticalDragUpdate: {
+          if (wp.parameters.containsKey('swipe')) {
+            final _Swipe swipe = wp.parameters['swipe'];
             swipe.updatePosition = offset!;
             swipe.updateTimestamp = timestamp!;
           }
           break;
         }
-        case _onPanEnd: {
-          if (wc.parameters != null && wc.parameters!.containsKey('swipe')) {
-            final _Swipe swipe = wc.parameters?['swipe'];
+        case _onPanEnd: case _onHorizontalDragEnd: case _onVerticalDragEnd: {
+          if (wp.parameters.containsKey('swipe')) {
+            final _Swipe swipe = wp.parameters['swipe'];
             final String direction = swipe.calculateSwipe();
             if (direction.isNotEmpty) {
               final Offset start = swipe.getStartPosition!;
               final Offset end   = swipe.getUpdatePosition!;
-              wc.parameters!.clear();
+              wp.parameters.clear();
               await PluginTealeaf.onTlGestureEvent(
                 gesture: 'swipe',
-                id: wc.widgetPath,
+                id: wp.widgetPath(),
                 target: gestureTarget,
                 data: <String, dynamic> {
                   'pointer1':  {'dx': start.dx, 'dy': start.dy, 'ts': swipe.getStartTimestampString()},
@@ -1342,26 +1617,30 @@ class TealeafAopInstrumentation {
     }
   }
 
-  static void pinchGestureHelper({required Widget gesture, required String onType, Offset? offset, double? scale, Velocity? velocity, int fingers=0}) async {
+  static void pinchGestureHelper({required Widget? gesture, required String onType, Offset? offset, double? scale, Velocity? velocity, int fingers=0}) async {
+    if (gesture == null) {
+      tlLogger.w('Warning: Gesture is null in pinchGestureHelper');
+      return;
+    }
     final int hashCode = gesture.hashCode;
 
     if (WidgetPath.containsKey(hashCode)) {
-      final WidgetPath? wc = WidgetPath.getPath(hashCode);
-      final BuildContext? context = wc!.context;
-      final String gestureTarget = getGestureTarget(wc);
+      final WidgetPath? wp = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wp!.context;
+      final String gestureTarget = getGestureTarget(wp);
 
-      tlLogger.v('@@@ ${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v('${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
 
       switch (onType) {
         case _onScaleStart: {
           final _Pinch pinch = _Pinch();
           pinch.startPosition = offset!;
-          wc.setParameters = <String, dynamic> {'pinch' : pinch};
+          wp.addParameters(<String, dynamic> {'pinch' : pinch});
           break;
         }
         case _onScaleUpdate: {
-          if (wc.parameters != null && wc.parameters!.containsKey('pinch')) {
-            final _Pinch pinch = wc.parameters?['pinch'];
+          if (wp.parameters.containsKey('pinch')) {
+            final _Pinch pinch = wp.parameters['pinch'];
             pinch.updatePosition = offset!;
             pinch.scale = scale!;
             pinch.fingers = fingers;
@@ -1369,8 +1648,8 @@ class TealeafAopInstrumentation {
           break;
         }
         case _onScaleEnd: {
-          if (wc.parameters != null && wc.parameters!.containsKey('pinch')) {
-            final _Pinch pinch = wc.parameters?['pinch'];
+          if (wp.parameters.containsKey('pinch')) {
+            final _Pinch pinch = wp.parameters['pinch'];
             pinch.fingers = fingers;
             final String direction = pinch.pinchResult();
             tlLogger.v('--> Pinch, fingers: ${pinch.getMaxFingers}, direction: $direction');
@@ -1378,10 +1657,10 @@ class TealeafAopInstrumentation {
             if (direction.isNotEmpty) {
               final Offset start = pinch.getStartPosition!;
               final Offset end   = pinch.getUpdatePosition!;
-              wc.parameters!.clear();
+              wp.parameters.clear();
               await PluginTealeaf.onTlGestureEvent(
                   gesture: 'pinch',
-                  id: wc.widgetPath,
+                  id: wp.widgetPath(),
                   target: gestureTarget,
                   data: <String, dynamic> {
                     'pointer1':  {'dx': start.dx, 'dy': start.dy},

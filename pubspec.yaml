@@ -1,6 +1,6 @@
 name: tl_flutter_plugin
 description: A flutter plugin project for Tealeaf.
-version: 1.0.1
+version: 1.0.6
 homepage: "https://github.com/acoustic-analytics/acoustic_tealeaf"
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -12,8 +12,8 @@ homepage: "https://github.com/acoustic-analytics/acoustic_tealeaf"
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-build-name: 1.0.1r1
-build-number: 1.0.1
+build-name: 1.0.6r1
+build-number: 1.0.6
 
 environment:
   sdk: ">=2.18.0 <3.0.0"

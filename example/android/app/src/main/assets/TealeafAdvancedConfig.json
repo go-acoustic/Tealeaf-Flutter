@@ -1,5 +1,5 @@
 {
-  "LibraryVersion": "10.3.119",
+  "LibraryVersion": "10.3.21",
   "FilterMessageTypes": false,
   "MessageTypes": "4,5",
   "AddMessageTypeHeader": false,
@@ -12,7 +12,6 @@
   "DefaultTextViewPaddingRight": 5,
   "DefaultAutoLayoutDelay": 500,
   "ScreenViewUnloadDelay": 1000,
-  "GestureConfirmedScreenshotDelay": 0,
   "RemoveIp": false,
   "IpPlaceholder": "N/A",
   "UseZindex": false,
@@ -20,15 +19,12 @@
   "StripDrawableFolderExt": true,
   "WebViewSetTagForId": false,
   "KillSwitchDelay": 300,
-  "GenerateImageHash": true,
+  "GenerateImageMD5Hash": true,
   "SwitchWidth": 140,
   "EnableActivityLifeCycleListener": true,
   "UseXpathId": false,
   "RemoveAllCookies": false,
   "ColorPrimary": "#3F51B5",
   "ColorPrimaryDark": "#303F9F",
-  "ColorAccent": "#FF4081",
-  "EnableGestureSwipeLogScreen": true,
-  "EnableScreenshotCache": false,
-  "FlushUpdatedPlaceHolders": false
+  "ColorAccent": "#FF4081"
 }

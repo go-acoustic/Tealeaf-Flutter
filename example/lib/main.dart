@@ -183,7 +183,7 @@ class _MyAppState extends State<MyApp> {
             Text('Taps: $count'),
             const Padding(padding: EdgeInsets.only(bottom: 20.0)),
             if (_showExceptionMsg) GestureDetector(
-              child: const Text("Tap on me to cause an exception!"),
+              child: const Text("Tap on me to cause an exception!", semanticsLabel: 'Expires in 15 seconds'),
               onTap: (){
                 debugPrint("User wanted an exception thrown");
                 throw Exception("Test logging of uncaught Flutter exception");
@@ -205,27 +205,31 @@ class _MyAppState extends State<MyApp> {
                 ],
               ),
             const Padding(padding: EdgeInsets.only(bottom: 40.0)),
-            GestureDetector(child:
-              Stack(alignment: AlignmentDirectional.center, children: [
-                Container(
-                  width:  55.0,
-                  height: 55.0,
-                  decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)
-                ),
-                const Icon(Icons.add)
-              ]),
-              onTap: () {
-                debugPrint("Incremented counter");
-                setState(() {
-                  count += 1;
-                });
-              },
-              onLongPress: () {
-                debugPrint("Incremented counter (twice)");
-                setState(() {
-                  count += 2;
-                });
-              }
+            Semantics(
+              hint: "my hint",
+              label: "my label",
+              child: GestureDetector(
+                child: Stack(alignment: AlignmentDirectional.center, children: [
+                  Container(
+                    width:  55.0,
+                    height: 55.0,
+                    decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)
+                  ),
+                  const Icon(Icons.add)
+                ]),
+                onTap: () {
+                  debugPrint("Incremented counter");
+                  setState(() {
+                    count += 1;
+                  });
+                },
+                onLongPress: () {
+                  debugPrint("Incremented counter (twice)");
+                  setState(() {
+                    count += 2;
+                  });
+                }
+              )
             ),
           ]),
         ))),

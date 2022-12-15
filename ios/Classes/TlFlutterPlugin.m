@@ -617,7 +617,14 @@
     CGFloat        vdx = 0, vdy = 0;
     NSString       *direction = nil;
     NSMutableArray *pointerEvents = [[NSMutableArray alloc] init];
-    
+
+    NSDictionary *data = (NSDictionary *) args[@"data"];
+    NSDictionary *accessibility = [[NSDictionary alloc] init];
+
+    if (data != (NSDictionary *) [NSNull null]) {
+        accessibility = data[@"accessibility"];
+    }
+
     if (isPinch || isSwipe) {
         PointerEvent *pointerEvent1, *pointerEvent2;
 
@@ -682,7 +689,8 @@
                 @"idType":   @(-4),
                 @"type":     @"FlutterSurfaceView",
                 @"subType":  @"SurfaceView",
-                @"tlType":   target
+                @"tlType":   target,
+                @"accessibility": accessibility,
             },
         }];
         // After two 'touch' entries, move to next element in touches arrays (for pinch and swipe)

@@ -6,7 +6,7 @@
       "CaptureLayoutDelay": 500,
       "ScreenShot": true,
       "NumberOfWebViews": 0,
-      "CaptureUserEvents": true,
+      "CaptureUserEvents": false,
       "CaptureScreenVisits": true,
       "CaptureLayoutOn": 2,
       "CaptureScreenshotOn": 1,

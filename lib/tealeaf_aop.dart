@@ -8,10 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 
-import 'package:tl_flutter_plugin/aspectd.dart';
+import 'package:tl_flutter_plugin/aspectd_defs.dart';
 import 'package:tl_flutter_plugin/timeit.dart';
 import 'package:tl_flutter_plugin/tl_flutter_plugin.dart';
 import 'package:tl_flutter_plugin/logger.dart';
+
+// TBD: Add appropriate class documentation (before publishing to pub.dev)
 
 class WidgetPath {
   WidgetPath();
@@ -25,12 +27,12 @@ class WidgetPath {
   static Map<Widget, String> pathCache      = {};
 
   BuildContext? context;
-  Element?  parent;
-  String?   parentWidgetType;
-  String?   pathHash;
-  int?      key;
-  late bool shorten;
-  late bool hash;
+  Element?   parent;
+  String?    parentWidgetType;
+  String?    pathHash;
+  int?       key;
+  late bool  shorten;
+  late bool  hash;
   late String path;
 
   int  position = 0;
@@ -38,17 +40,17 @@ class WidgetPath {
   Map<String, dynamic> parameters = {};
 
   int siblingPosition(Element parent, Widget child) {
-   int result;
+    int result;
 
-   try {
-     final dynamic currentWidget = parent.widget;
-     final List<Widget> children = currentWidget.children;
-     result = children.indexOf(child);
-   }
-   on NoSuchMethodError {
-     result = -1;
-   }
-   return result;
+    try {
+      final dynamic currentWidget = parent.widget;
+      final List<Widget> children = currentWidget.children;
+      result = children.indexOf(child);
+    }
+    on NoSuchMethodError {
+      result = -1;
+    }
+    return result;
   }
 
   WidgetPath.create(this.context, {this.shorten = true, this.hash = false, String exclude = excl}) {
@@ -297,8 +299,8 @@ class _TlBinder extends WidgetsBindingObserver {
         final Velocity? velocity = swipe.velocity;
         final String direction = swipe.direction;
 
-        tlLogger.v(
-            'Scrollable, start: ${start?.dx},${start?.dy}, end: ${end?.dx},${end?.dy}, velocity: $velocity, direction: $direction');
+        tlLogger.v('Scrollable start timestamp: ${swipe.getStartTimestampString()}');
+        tlLogger.v('Scrollable, start: ${start?.dx},${start?.dy}, end: ${end?.dx},${end?.dy}, velocity: $velocity, direction: $direction');
 
         await PluginTealeaf.onTlGestureEvent(
             gesture: 'swipe',
@@ -380,13 +382,13 @@ class _TlBinder extends WidgetsBindingObserver {
     bool skippingFrame = false;
 
     if (logFrameTimer != null && logFrameTimer!.isActive) {
-      tlLogger.v('Cancelling screenview logging, frame interval: $elapsed');
+      tlLogger.v('Cancelling screenview logging, frame interval, elapsed: $elapsed, start: $currentTime');
       logFrameTimer!.cancel();
       logFrameTimer = null;
       skippingFrame = loggingScreen;
     }
     else {
-      tlLogger.v('Logging screenview with no pending frame, frame interval: $elapsed, logging now: $loggingScreen');
+      tlLogger.v('Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
     }
     final int waitTime = (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
 
@@ -557,8 +559,9 @@ class _TlBinder extends WidgetsBindingObserver {
         Map<String, dynamic>? font;
         Map<String, dynamic>? image;
         String? text;
-        bool?  maskingEnabled = await getMaskingEnabled();
 
+        Map<String, dynamic>? accessibility = args['accessibility'];
+        bool?  maskingEnabled = await getMaskingEnabled();
         bool masked = maskingEnabled! && (maskIds!.contains(path) || maskIds!.contains(wp.widgetDigest()));
 
         if (subType.compareTo("ImageView") == 0) {
@@ -664,6 +667,7 @@ class _TlBinder extends WidgetsBindingObserver {
           },
           if (image != null)  'image' : image,
           if (aStyle != null) 'style' : aStyle,
+          if (accessibility != null) 'accessibility' : accessibility,
           'originalId': path.replaceAll("/", ""),
           'masked': '$masked'
         });
@@ -964,6 +968,7 @@ class TealeafAopInstrumentation {
 
         final WidgetPath? cp = WidgetPath.getPath(widget.hashCode);
         final WidgetPath  wp = WidgetPath.create(bc, hash: true);
+        final String? semantics = cp?.parameters['semanticsLabel'];
 
         wp.addInstance(widget.hashCode);
 
@@ -971,6 +976,7 @@ class TealeafAopInstrumentation {
           if (cp != null && cp.parameters.containsKey('image')) 'image': cp.parameters['image'],
           'type': widget.runtimeType.toString(),
           'subType': 'ImageView',
+          if (semantics != null && semantics.isNotEmpty) 'accessibility': {'id': '/Image', 'label': '', 'hint': semantics},
           'data': (widget) async {
             tlLogger.v('_ImageState class: ${target.toString()}, hash: ${wp.key}');
             final dynamic image = wp.parameters['image'];
@@ -1387,6 +1393,7 @@ class TealeafAopInstrumentation {
 
     final TextStyle style = pointcut.members?['style']?? DefaultTextStyle.of(bc).style?? TextStyle();
     final TextAlign textAlign = pointcut.members?['textAlign']?? DefaultTextStyle.of(bc).textAlign?? TextAlign.left;
+    final String semantics = pointcut.members?['semanticsLabel']?? '';
     final WidgetPath wp = WidgetPath.create(bc, hash: true);
 
     wp.addInstance(widget.hashCode);
@@ -1396,8 +1403,33 @@ class TealeafAopInstrumentation {
       'subType': 'TextView',
       'data':    getText,
       'style':   style,
-      'align':   textAlign
+      'align':   textAlign,
+      if (semantics.isNotEmpty) 'accessibility': {'id': '/Text', 'label': '', 'hint': semantics},
     });
+  }
+
+  static Map<String, dynamic> checkForSemantics(WidgetPath? wp) {
+    final BuildContext? context = wp!.context;
+    final Map<String, dynamic> accessibility = {};
+    Semantics? semantics;
+
+    int maxVisit = 10; // TBD: How far up the tree should we look for Semantics?
+
+    context?.visitAncestorElements((ancestor) {
+      final Widget parentWidget = ancestor.widget;
+      if (parentWidget is Semantics) {
+        semantics = parentWidget;
+        return false;
+      }
+      return --maxVisit > 0;
+    });
+
+    if (semantics != null) {
+      final String? hint  = semantics!.properties.hint;
+      final String? label = semantics!.properties.label;
+      accessibility.addAll({'accessibility': {'id': '/GestureDetector', 'label': label?? '', 'hint': hint?? ''}});
+    }
+    return accessibility;
   }
 
   static void pointerEventHelper(String action, PointerEvent pe) {
@@ -1537,6 +1569,7 @@ class TealeafAopInstrumentation {
       final WidgetPath? wp = WidgetPath.getPath(hashCode);
       final BuildContext? context = wp!.context;
       final String gestureTarget = getGestureTarget(wp);
+      final Map<String, dynamic> accessibility = checkForSemantics(wp);
 
       tlLogger.v('${gestureType!.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
       tlLogger.v('--> Path: ${wp.widgetPath()}, digest: ${wp.widgetDigest()}');
@@ -1545,6 +1578,7 @@ class TealeafAopInstrumentation {
         gesture: gestureType,
         id: wp.widgetPath(),
         target: gestureTarget,
+        data: accessibility.isNotEmpty ? accessibility : null,
         layoutParameters: _TlBinder.layoutParametersForGestures
       );
     }
@@ -1591,7 +1625,10 @@ class TealeafAopInstrumentation {
             if (direction.isNotEmpty) {
               final Offset start = swipe.getStartPosition!;
               final Offset end   = swipe.getUpdatePosition!;
+              final Map<String, dynamic> accessibility = checkForSemantics(wp);
+
               wp.parameters.clear();
+              tlLogger.v('Swipe start: ${DateTime.now().millisecondsSinceEpoch}');
               await PluginTealeaf.onTlGestureEvent(
                 gesture: 'swipe',
                 id: wp.widgetPath(),
@@ -1601,6 +1638,7 @@ class TealeafAopInstrumentation {
                   'pointer2':  {'dx': end.dx,   'dy': end.dy,   'ts': swipe.getUpdateTimestampString()},
                   'velocity':  {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
                   'direction': direction,
+                  ...accessibility,
                 },
                 layoutParameters: _TlBinder.layoutParametersForGestures
               );
@@ -1628,6 +1666,7 @@ class TealeafAopInstrumentation {
       final WidgetPath? wp = WidgetPath.getPath(hashCode);
       final BuildContext? context = wp!.context;
       final String gestureTarget = getGestureTarget(wp);
+      final Map<String, dynamic> accessibility = checkForSemantics(wp);
 
       tlLogger.v('${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
 
@@ -1667,6 +1706,7 @@ class TealeafAopInstrumentation {
                     'pointer2':  {'dx': end.dx,   'dy': end.dy},
                     'direction': direction,
                     'velocity':  {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
+                    ...accessibility,
                   },
                   layoutParameters: _TlBinder.layoutParametersForGestures
               );

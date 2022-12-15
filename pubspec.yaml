@@ -1,6 +1,6 @@
 name: tl_flutter_plugin
-description: A flutter plugin project for Tealeaf.
-version: 1.0.6
+description: Acoustic Tealeaf can monitor traffic between your application and server. It captures device context and user activity to monitor and evaluate the performance of your applications
+version: 1.0.8
 homepage: "https://github.com/acoustic-analytics/acoustic_tealeaf"
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -12,8 +12,8 @@ homepage: "https://github.com/acoustic-analytics/acoustic_tealeaf"
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-build-name: 1.0.6r1
-build-number: 1.0.6
+build-name: 1.0.7r1
+build-number: 1.0.7
 
 environment:
   sdk: ">=2.18.0 <3.0.0"
@@ -51,7 +51,7 @@ flutter:
         pluginClass: TlFlutterPlugin
 
   assets:
-    - assets/pubspec.yaml
+    - pubspec.yaml
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

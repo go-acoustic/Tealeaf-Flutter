@@ -1,14 +1,15 @@
 import 'package:http/http.dart' as http;
-import 'package:tl_flutter_plugin/aspectd.dart';
+import 'package:tl_flutter_plugin/aspectd_defs.dart';
 import 'package:tl_flutter_plugin/tl_flutter_plugin.dart';
 import 'logger.dart';
+
+// TBD: Add appropriate class (module) documentaion
 
 @Aspect()
 @pragma("vm:entry-point")
 class TealeafAopInstrumentationHttp {
-
-@Call("package:http/src/base_client.dart", "BaseClient", "-send")
-@pragma("vm:entry-point")
+  @Call("package:http/src/base_client.dart", "BaseClient", "-send")
+  @pragma("vm:entry-point")
   dynamic _xxxTealeaf20(PointCut pointCut) async {
     final DateTime startTime = DateTime.now();
     final Object request = pointCut.positionalParams?[0];

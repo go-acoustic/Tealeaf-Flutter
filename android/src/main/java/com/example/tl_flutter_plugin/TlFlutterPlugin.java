@@ -51,6 +51,7 @@ import com.tl.uic.model.ScreenviewType;
 import com.tl.uic.model.Style;
 import com.tl.uic.model.Touch;
 import com.tl.uic.model.TouchPosition;
+import com.tl.uic.model.kotlin.Accessibility;
 import com.tl.uic.util.CommonUtil;
 import com.tl.uic.util.EnhancedImageUtil;
 import com.tl.uic.util.LayoutUtil;
@@ -308,6 +309,16 @@ class ScreenUtil {
 
       final Style style = new Style();
       final Object styleObject = wLayout.get("style");
+      @SuppressWarnings("unchecked")
+      final HashMap<String, String> accessibility = (HashMap<String, String>) wLayout.get("accessibility");
+
+      if (accessibility != null) {
+        baseTarget.setAccessibility(new Accessibility(
+                accessibility.get("id"),
+                accessibility.get("label"),
+                accessibility.get("hint"))
+        );
+      }
 
       if (styleObject instanceof Map) {
         @SuppressWarnings("unchecked")
@@ -343,6 +354,7 @@ class ScreenUtil {
           style.setColorPrimaryDark(colorPrimaryDark);
           style.setColorAccent(colorAccent);
         }
+
         baseTarget.setStyle(style);
       }
 
@@ -551,8 +563,8 @@ class GestureUtil {
 
     if (rootView != null && rootView.getVisibility() != View.INVISIBLE) {
       if (rootView instanceof ViewGroup) {
-        ViewGroup viewGroup = (ViewGroup)rootView;
-
+        ViewGroup viewGroup;
+        viewGroup = (ViewGroup) rootView;
         for (int i = 0; i < viewGroup.getChildCount(); ++i) {
           View child = viewGroup.getChildAt(i);
           finalXPath = printLayoutData(child, xpath, i, null, getInitialZIndex());
@@ -665,6 +677,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
   final static String NO_METHODCALL = "500: No MethodCall request";
   final static String NO_ARGS = "501: arguments is null";
   final static String INVOKE_EXCEPTION = "502: Exception in request: ";
+
   final static boolean FLUTTER_GESTURE_EVENT = true;
 
   private Object lastPointerEvent = null;
@@ -672,6 +685,8 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
   private long lastDown = -1L;
   private String lastPage = "";
   private Image lastPageImage = null;
+  // TBD: Do we need to compare screens on gesture events?
+  // private Bitmap lastRawScreen = null;
 
   // For some Android devices, the flutter screen size is different. Hence we need
   // to scale coordinates and sizes accordingly (and incorporate the pixel density).
@@ -958,6 +973,10 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
       final Activity activity = getActivity();
 
+      /*
+      final Bitmap screenBitmap = ScreenUtil.screenSnapshot(activity, renderer);
+      LOGGER.log(Level.INFO, "GESTURE: screen same?: " + screenBitmap.sameAs(lastRawScreen));
+      */
       if (FLUTTER_GESTURE_EVENT) {
         //final byte[] imageBytes = ScreenUtil.takeSnapshotAndCompress(activity, getRenderer(), maskedPositions);
 
@@ -1010,10 +1029,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
             ", timestamp: " + timestamp + ", as date: " + date);
 
     final long start = System.currentTimeMillis();
-
     final Bitmap screenBitmap = ScreenUtil.screenSnapshot(activity, renderer);
-
-    ScreenUtil.setControls(layout, widgetLayouts, scaleWidth, scaleHeight, maskedPositions);
 
     byte[] nextImageBytes = new byte[0];
 
@@ -1021,6 +1037,9 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
       LOGGER.log(Level.WARNING, "Warning: Failed to obtain screen snapshot from Flutter!");
     }
     else {
+      // lastRawScreen = screenBitmap.copy(Bitmap.Config.ARGB_8888, false);
+      ScreenUtil.setControls(layout, widgetLayouts, scaleWidth, scaleHeight, maskedPositions);
+
       final byte[] imageBytes = ScreenUtil.obscureAndCompress(screenBitmap, maskedPositions);
 
       if (imageBytes == null) {
@@ -1131,7 +1150,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     final T value = parameter(args, key);
 
     if (value == null) {
-      LOGGER.log(Level.INFO, "Parameter: " + key + " not found in: " + args.toString());
+      LOGGER.log(Level.INFO, "Parameter: " + key + " not found in: " + (args == null ? "<args is null>" : args.toString()));
       throw new Exception(key + " parameter not found!");
     }
 

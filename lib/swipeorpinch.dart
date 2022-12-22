@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'logger.dart';
+
 ///
 /// Very simple class for swipe and pinch(zoom) gesturing. Swipe can also
 /// generate "fling" given a certain velocity threshold. Customers will write
@@ -22,7 +23,7 @@ class SwipeOrPinchDetector extends StatefulWidget {
     @required this.child,
   }) : super(key: key);
 
-  final void Function (double? scale)? onPinch;
+  final void Function(double? scale)? onPinch;
   final bool pinch;
 
   /// How this gesture detector should behave during hit testing.
@@ -61,7 +62,7 @@ class DetectorState extends State<SwipeOrPinchDetector> {
   @override
   void initState() {
     super.initState();
-    _startPosition  = const Offset(0.0, 0.0);
+    _startPosition = const Offset(0.0, 0.0);
     _updatePosition = const Offset(0.0, 0.0);
     lastScale = 0.0;
   }
@@ -77,13 +78,15 @@ class DetectorState extends State<SwipeOrPinchDetector> {
         },
         onScaleUpdate: (ScaleUpdateDetails details) {
           if (lastScale == null || lastScale != details.scale) {
-            tlLogger.v('ScaleUpdateDetails scale changed: ${details.toString()}');
+            tlLogger
+                .v('ScaleUpdateDetails scale changed: ${details.toString()}');
           }
           lastScale = details.scale;
         },
         onScaleEnd: (ScaleEndDetails details) {
           if (lastScale != null) {
-            tlLogger.v('ScaleEndDetails. scale: $lastScale, fingers: ${details.pointerCount}, ${details.toString()}');
+            tlLogger.v(
+                'ScaleEndDetails. scale: $lastScale, fingers: ${details.pointerCount}, ${details.toString()}');
             widget.onPinch?.call(lastScale);
           }
         },
@@ -125,8 +128,8 @@ class DetectorState extends State<SwipeOrPinchDetector> {
 
 /// The direction of the swipe.
 enum SwipeDirection {
-  up,    // Swipe up.
-  down,  // Swipe down.
-  left,  // Swipe left.
-  right  // Swipe right.
+  up, // Swipe up.
+  down, // Swipe down.
+  left, // Swipe left.
+  right // Swipe right.
 }

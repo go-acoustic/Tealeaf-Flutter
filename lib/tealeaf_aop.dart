@@ -21,21 +21,21 @@ class WidgetPath {
   static const String excl = r'^(Focus|Semantics|InheritedElement|.*\n_).*$';
   static const String reduce = r"[a-z]";
   static const String sep = '/';
-  static Hash  get digest => sha1;
+  static Hash get digest => sha1;
 
-  static Map<int, dynamic>   widgetContexts = {};
-  static Map<Widget, String> pathCache      = {};
+  static Map<int, dynamic> widgetContexts = {};
+  static Map<Widget, String> pathCache = {};
 
   BuildContext? context;
-  Element?   parent;
-  String?    parentWidgetType;
-  String?    pathHash;
-  int?       key;
-  late bool  shorten;
-  late bool  hash;
+  Element? parent;
+  String? parentWidgetType;
+  String? pathHash;
+  int? key;
+  late bool shorten;
+  late bool hash;
   late String path;
 
-  int  position = 0;
+  int position = 0;
   bool usedInLayout = false;
   Map<String, dynamic> parameters = {};
 
@@ -46,14 +46,14 @@ class WidgetPath {
       final dynamic currentWidget = parent.widget;
       final List<Widget> children = currentWidget.children;
       result = children.indexOf(child);
-    }
-    on NoSuchMethodError {
+    } on NoSuchMethodError {
       result = -1;
     }
     return result;
   }
 
-  WidgetPath.create(this.context, {this.shorten = true, this.hash = false, String exclude = excl}) {
+  WidgetPath.create(this.context,
+      {this.shorten = true, this.hash = false, String exclude = excl}) {
     if (context == null) {
       return;
     }
@@ -95,7 +95,7 @@ class WidgetPath {
       return true;
     });
 
-    for (int index = stk.length; index > 0; ) {
+    for (int index = stk.length; index > 0;) {
       path.write('$sep${stk[--index]}');
       pathCache[stk[--index]] = path.toString();
     }
@@ -104,7 +104,8 @@ class WidgetPath {
     this.path = path.toString();
     parentWidgetType = parent!.widget.runtimeType.toString();
 
-    tlLogger.v('Widget path added: ${widget.runtimeType.toString()}, path: $this.path, digest: ${widgetDigest()}');
+    tlLogger.v(
+        'Widget path added: ${widget.runtimeType.toString()}, path: $this.path, digest: ${widgetDigest()}');
   }
 
   List<int> findExistingPathKeys() {
@@ -143,18 +144,18 @@ class WidgetPath {
         }
         position = keyCount + 1;
         tlLogger.v('path sibling, count: $position');
-      }
-      else {
+      } else {
         if (existingKeys.contains(key)) {
           WidgetPath wp = widgetContexts[key];
           position = wp.position;
           tlLogger.v('Replacing logged widget: $key, position: $position');
-        }
-        else {
-          tlLogger.v('Removing $keyCount siblings(new key: $key): ...${firstPath.path.substring(max(0, firstPath.path.length - 90))}');
+        } else {
+          tlLogger.v(
+              'Removing $keyCount siblings(new key: $key): ...${firstPath.path.substring(max(0, firstPath.path.length - 90))}');
           for (int eKey in existingKeys) {
             WidgetPath wp = widgetContexts[eKey];
-            tlLogger.v('Removing $eKey, position: ${wp.position}, used: ${wp.usedInLayout}');
+            tlLogger.v(
+                'Removing $eKey, position: ${wp.position}, used: ${wp.usedInLayout}');
             removePath(eKey);
           }
         }
@@ -164,7 +165,7 @@ class WidgetPath {
     widgetContexts[key] = this;
   }
 
-  String widgetPath() => (position == 0) ? path :'$path/$position';
+  String widgetPath() => (position == 0) ? path : '$path/$position';
 
   String? widgetDigest() {
     if (hash && pathHash == null) {
@@ -173,23 +174,29 @@ class WidgetPath {
     return pathHash;
   }
 
-  void addParameters(Map<String, dynamic> parameters) => this.parameters.addAll(parameters);
+  void addParameters(Map<String, dynamic> parameters) =>
+      this.parameters.addAll(parameters);
 
-  static WidgetPath?   getPath(int key) => widgetContexts[key];
-  static void          removePath(int? key) { if (key != null) widgetContexts.remove(key); }
-  static bool          containsKey(int key) => widgetContexts.containsKey(key);
-  static void          clear() => widgetContexts.clear();
-  static int           get size => widgetContexts.length;
-  static Function      removeWhere = widgetContexts.removeWhere;
-  static List<dynamic> entryList() => widgetContexts.entries.toList(growable: false);
-  static void          clearPathCache() => pathCache.clear();
-  String               makeShorter(String str) => shorten ? str.replaceAll(RegExp(reduce), '') : str;
+  static WidgetPath? getPath(int key) => widgetContexts[key];
+  static void removePath(int? key) {
+    if (key != null) widgetContexts.remove(key);
+  }
+
+  static bool containsKey(int key) => widgetContexts.containsKey(key);
+  static void clear() => widgetContexts.clear();
+  static int get size => widgetContexts.length;
+  static Function removeWhere = widgetContexts.removeWhere;
+  static List<dynamic> entryList() =>
+      widgetContexts.entries.toList(growable: false);
+  static void clearPathCache() => pathCache.clear();
+  String makeShorter(String str) =>
+      shorten ? str.replaceAll(RegExp(reduce), '') : str;
 }
 
 typedef _Loader = Future<String> Function();
 
 class _TlConfiguration {
-   factory _TlConfiguration() => _instance ??= _TlConfiguration._internal();
+  factory _TlConfiguration() => _instance ??= _TlConfiguration._internal();
 
   _TlConfiguration._internal() {
     _dataLoader ??= PluginTealeaf.getGlobalConfiguration;
@@ -255,17 +262,17 @@ class _TlBinder extends WidgetsBindingObserver {
   static bool initRapidFrameRate = true;
 
   static _TlBinder? _instance;
-  static List<Map<String,dynamic>>? layoutParametersForGestures;
+  static List<Map<String, dynamic>>? layoutParametersForGestures;
 
-  bool   initEnvironment = true;
+  bool initEnvironment = true;
   String frameHash = "";
-  int    screenWidth = 0;
-  int    screenHeight = 0;
-  int    lastFrameTime = 0;
-  bool   loggingScreen = false;
+  int screenWidth = 0;
+  int screenHeight = 0;
+  int lastFrameTime = 0;
+  bool loggingScreen = false;
   Timer? logFrameTimer;
 
-  bool?  maskingEnabled;
+  bool? maskingEnabled;
   List<dynamic>? maskIds;
   List<dynamic>? maskValuePatterns;
 
@@ -273,17 +280,18 @@ class _TlBinder extends WidgetsBindingObserver {
 
   void startScroll(Offset? position, Duration? timeStamp) {
     scrollCapture = _Swipe();
-    scrollCapture?.startPosition = position ?? Offset(0,0);
-    scrollCapture?.startTimeStamp = timeStamp?? Duration();
+    scrollCapture?.startPosition = position ?? Offset(0, 0);
+    scrollCapture?.startTimeStamp = timeStamp ?? Duration();
   }
 
   void updateScroll(Offset? position, Duration? timeStamp) {
-    scrollCapture?.updatePosition = position ?? Offset(0,0);
-    scrollCapture?.updateTimestamp = timeStamp?? Duration();
+    scrollCapture?.updatePosition = position ?? Offset(0, 0);
+    scrollCapture?.updateTimestamp = timeStamp ?? Duration();
   }
 
   void endScroll(Velocity? velocity) {
-    scrollCapture?.velocity = velocity?? Velocity(pixelsPerSecond: Offset(0, 0));
+    scrollCapture?.velocity =
+        velocity ?? Velocity(pixelsPerSecond: Offset(0, 0));
     scrollCapture?.calculateSwipe();
   }
 
@@ -299,23 +307,34 @@ class _TlBinder extends WidgetsBindingObserver {
         final Velocity? velocity = swipe.velocity;
         final String direction = swipe.direction;
 
-        tlLogger.v('Scrollable start timestamp: ${swipe.getStartTimestampString()}');
-        tlLogger.v('Scrollable, start: ${start?.dx},${start?.dy}, end: ${end?.dx},${end?.dy}, velocity: $velocity, direction: $direction');
+        tlLogger.v(
+            'Scrollable start timestamp: ${swipe.getStartTimestampString()}');
+        tlLogger.v(
+            'Scrollable, start: ${start?.dx},${start?.dy}, end: ${end?.dx},${end?.dy}, velocity: $velocity, direction: $direction');
 
         await PluginTealeaf.onTlGestureEvent(
             gesture: 'swipe',
             id: '../Scrollable',
             target: 'Scrollable',
             data: <String, dynamic>{
-              'pointer1': {'dx': start?.dx, 'dy': start?.dy, 'ts': swipe.getStartTimestampString()},
-              'pointer2': {'dx': end?.dx, 'dy': end?.dy, 'ts': swipe.getUpdateTimestampString()},
-              'velocity': {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
+              'pointer1': {
+                'dx': start?.dx,
+                'dy': start?.dy,
+                'ts': swipe.getStartTimestampString()
+              },
+              'pointer2': {
+                'dx': end?.dx,
+                'dy': end?.dy,
+                'ts': swipe.getUpdateTimestampString()
+              },
+              'velocity': {
+                'dx': velocity?.pixelsPerSecond.dx,
+                'dy': velocity?.pixelsPerSecond.dy
+              },
               'direction': direction,
             },
-            layoutParameters: _TlBinder.layoutParametersForGestures
-        );
-      }
-      else {
+            layoutParameters: _TlBinder.layoutParametersForGestures);
+      } else {
         tlLogger.v('Incomplete scroll before frame');
       }
     }
@@ -328,8 +347,7 @@ class _TlBinder extends WidgetsBindingObserver {
       if (usePostFrame) {
         tlLogger.v("Frame handling with single PostFrame callbacks");
         handleWithPostFrameCallback(binding, timestamp);
-      }
-      else {
+      } else {
         tlLogger.v("Frame handling with direct persistent callbacks");
         handleScreenUpdate(timestamp);
       }
@@ -346,9 +364,15 @@ class _TlBinder extends WidgetsBindingObserver {
 
   Future<bool?> getMaskingEnabled() async {
     if (maskingEnabled == null) {
-      maskingEnabled = await _TlConfiguration().get("GlobalScreenSettings/Masking/HasMasking")?? false;
-      maskIds = await _TlConfiguration().get("GlobalScreenSettings/Masking/MaskIdList") ?? [];
-      maskValuePatterns = await _TlConfiguration().get("GlobalScreenSettings/Masking/MaskValueList") ?? [];
+      maskingEnabled = await _TlConfiguration()
+              .get("GlobalScreenSettings/Masking/HasMasking") ??
+          false;
+      maskIds = await _TlConfiguration()
+              .get("GlobalScreenSettings/Masking/MaskIdList") ??
+          [];
+      maskValuePatterns = await _TlConfiguration()
+              .get("GlobalScreenSettings/Masking/MaskValueList") ??
+          [];
     }
     return maskingEnabled;
   }
@@ -364,13 +388,14 @@ class _TlBinder extends WidgetsBindingObserver {
       final RenderObject? rootObject = rootViewElement?.findRenderObject();
 
       if (rootObject != null) {
-        screenWidth  = rootObject.paintBounds.width.round();
+        screenWidth = rootObject.paintBounds.width.round();
         screenHeight = rootObject.paintBounds.height.round();
 
         if (screenWidth != 0 && screenHeight != 0) {
           initEnvironment = false;
 
-          await PluginTealeaf.tlSetEnvironment(screenWidth: screenWidth, screenHeight: screenHeight);
+          await PluginTealeaf.tlSetEnvironment(
+              screenWidth: screenWidth, screenHeight: screenHeight);
 
           tlLogger.v('TlBinder, renderView w: $screenWidth, h: $screenHeight');
         }
@@ -382,26 +407,30 @@ class _TlBinder extends WidgetsBindingObserver {
     bool skippingFrame = false;
 
     if (logFrameTimer != null && logFrameTimer!.isActive) {
-      tlLogger.v('Cancelling screenview logging, frame interval, elapsed: $elapsed, start: $currentTime');
+      tlLogger.v(
+          'Cancelling screenview logging, frame interval, elapsed: $elapsed, start: $currentTime');
       logFrameTimer!.cancel();
       logFrameTimer = null;
       skippingFrame = loggingScreen;
+    } else {
+      tlLogger.v(
+          'Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
     }
-    else {
-      tlLogger.v('Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
-    }
-    final int waitTime = (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
+    final int waitTime =
+        (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
 
     void performScreenview() async {
       loggingScreen = true;
       logFrameTimer = null;
-      final int timerDelay = DateTime.now().millisecondsSinceEpoch - currentTime;
-      final int frameInterval = lastFrameTime == 0 ? 0: elapsed;
+      final int timerDelay =
+          DateTime.now().millisecondsSinceEpoch - currentTime;
+      final int frameInterval = lastFrameTime == 0 ? 0 : elapsed;
       final List<Map<String, dynamic>> layouts = await getAllLayouts();
 
       WidgetPath.clearPathCache();
       await checkForScroll();
-      tlLogger.v('Logging screenview, delay: $timerDelay, wait: $waitTime, frame interval: $frameInterval, Layout count: ${layouts.length}');
+      tlLogger.v(
+          'Logging screenview, delay: $timerDelay, wait: $waitTime, frame interval: $frameInterval, Layout count: ${layouts.length}');
       await PluginTealeaf.onScreenview("LOAD", timestamp, layouts);
       loggingScreen = false;
     }
@@ -409,13 +438,12 @@ class _TlBinder extends WidgetsBindingObserver {
     if (lastFrameTime == 0) {
       tlLogger.v('Logging first frame');
       performScreenview();
-    }
-    else if (skippingFrame) {
+    } else if (skippingFrame) {
       tlLogger.v('Logging screenview in process, skipping frame');
-    }
-    else {
+    } else {
       tlLogger.v("Logging screenview, wait: $waitTime");
-      logFrameTimer = Timer(Duration(milliseconds: waitTime), performScreenview);
+      logFrameTimer =
+          Timer(Duration(milliseconds: waitTime), performScreenview);
     }
     lastFrameTime = currentTime;
   }
@@ -425,7 +453,8 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   void handleScreenUpdate(Duration timestamp) {
-    tlLogger.v('Frame callback @$timestamp (widget path map size: ${WidgetPath.size})');
+    tlLogger.v(
+        'Frame callback @$timestamp (widget path map size: ${WidgetPath.size})');
 
     final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
@@ -450,19 +479,31 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   Future<void> getFrameRateConfiguration() async {
-    rapidFrameRateLimitMs = await _TlConfiguration().get("GlobalScreenSettings/RapidFrameRate") ?? 160;
-    rapidSequenceCompleteMs = await _TlConfiguration().get("GlobalScreenSettings/RapidFrameDone") ?? (2 * rapidSequenceCompleteMs);
+    rapidFrameRateLimitMs =
+        await _TlConfiguration().get("GlobalScreenSettings/RapidFrameRate") ??
+            160;
+    rapidSequenceCompleteMs =
+        await _TlConfiguration().get("GlobalScreenSettings/RapidFrameDone") ??
+            (2 * rapidSequenceCompleteMs);
     initRapidFrameRate = false;
   }
 
   Future<String> maskText(String text) async {
     final bool? maskingEnabled = await getMaskingEnabled();
     if (maskingEnabled!) {
-      if ((await _TlConfiguration().get("GlobalScreenSettings/Masking/HasCustomMask") ?? "").toString().contains("true")) {
-        final String? smallCase = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/smallCaseAlphabet");
-        final String? capitalCase = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/capitalCaseAlphabet");
-        final String? symbol = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/symbol");
-        final String? number = await _TlConfiguration().get("GlobalScreenSettings/Masking/Sensitive/number");
+      if ((await _TlConfiguration()
+                  .get("GlobalScreenSettings/Masking/HasCustomMask") ??
+              "")
+          .toString()
+          .contains("true")) {
+        final String? smallCase = await _TlConfiguration()
+            .get("GlobalScreenSettings/Masking/Sensitive/smallCaseAlphabet");
+        final String? capitalCase = await _TlConfiguration()
+            .get("GlobalScreenSettings/Masking/Sensitive/capitalCaseAlphabet");
+        final String? symbol = await _TlConfiguration()
+            .get("GlobalScreenSettings/Masking/Sensitive/symbol");
+        final String? number = await _TlConfiguration()
+            .get("GlobalScreenSettings/Masking/Sensitive/number");
 
         // Note: The following r"\p{..} expressions have been flagged erroneously as errors in some versions of the IDE
         //       However, they work fine and also do NOT show up in linter, so they do not break CI/CD
@@ -485,26 +526,28 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   Map<String, dynamic> createRootLayoutControl() {
-    return <String, dynamic> {
-      "zIndex":500,
-      "type":"FlutterImageView",
-      "subType":"UIView",
-      "tlType":"image",
-      "id":"[w,0],[v,0],[v,0],[FlutterView,0]",
-      "position":<String, dynamic> {
-        "y":"0",
-        "x":"0",
+    return <String, dynamic>{
+      "zIndex": 500,
+      "type": "FlutterImageView",
+      "subType": "UIView",
+      "tlType": "image",
+      "id": "[w,0],[v,0],[v,0],[FlutterView,0]",
+      "position": <String, dynamic>{
+        "y": "0",
+        "x": "0",
         "width": "$screenWidth",
         "height": "$screenHeight"
       },
-      "idType":-4,
-      "style":<String, dynamic> {
-        "borderColor":0,""
-        "borderAlpha":1,
-        "borderRadius":0
+      "idType": -4,
+      "style": <String, dynamic>{
+        "borderColor": 0,
+        ""
+            "borderAlpha": 1,
+        "borderRadius": 0
       },
-      "cssId":"w0v0v0FlutterView0",
-      "image": <String, dynamic> { // If # items change, update item count checks in native code
+      "cssId": "w0v0v0FlutterView0",
+      "image": <String, dynamic>{
+        // If # items change, update item count checks in native code
         "width": "$screenWidth",
         "height": "$screenHeight",
         "value": "",
@@ -526,7 +569,8 @@ class _TlBinder extends WidgetsBindingObserver {
     }
 
     for (dynamic entry in pathList) {
-      final MapEntry<int, dynamic> widgetEntry = entry as MapEntry<int, dynamic>;
+      final MapEntry<int, dynamic> widgetEntry =
+          entry as MapEntry<int, dynamic>;
       final int key = widgetEntry.key;
       final WidgetPath wp = widgetEntry.value as WidgetPath;
       final BuildContext? context = wp.context;
@@ -537,22 +581,23 @@ class _TlBinder extends WidgetsBindingObserver {
         continue;
       }
       final String contextString = context.toString();
-      if (contextString.startsWith('State') && contextString.endsWith('(DEFUNCT)(no widget)')) {
-        tlLogger.v("Deleting obsolete path item: $key, context: $contextString");
+      if (contextString.startsWith('State') &&
+          contextString.endsWith('(DEFUNCT)(no widget)')) {
+        tlLogger
+            .v("Deleting obsolete path item: $key, context: $contextString");
         WidgetPath.removePath(key);
         continue;
       }
       final Widget widget = context.widget;
-      final Map <String, dynamic> args = wp.parameters;
-      final String? type = args['type']?? '';
-      final String? subType = args['subType']?? '';
+      final Map<String, dynamic> args = wp.parameters;
+      final String? type = args['type'] ?? '';
+      final String? subType = args['subType'] ?? '';
 
       wp.usedInLayout = true;
 
       if (type != null && type.compareTo("GestureDetector") == 0) {
         hasGestures = true;
-      }
-      else if (subType != null) {
+      } else if (subType != null) {
         final String path = wp.widgetPath();
         final dynamic getData = args['data'];
         Map<String, dynamic>? aStyle;
@@ -561,8 +606,9 @@ class _TlBinder extends WidgetsBindingObserver {
         String? text;
 
         Map<String, dynamic>? accessibility = args['accessibility'];
-        bool?  maskingEnabled = await getMaskingEnabled();
-        bool masked = maskingEnabled! && (maskIds!.contains(path) || maskIds!.contains(wp.widgetDigest()));
+        bool? maskingEnabled = await getMaskingEnabled();
+        bool masked = maskingEnabled! &&
+            (maskIds!.contains(path) || maskIds!.contains(wp.widgetDigest()));
 
         if (subType.compareTo("ImageView") == 0) {
           image = await getData(widget);
@@ -571,18 +617,18 @@ class _TlBinder extends WidgetsBindingObserver {
             continue;
           }
           tlLogger.v('Image is available: ${widget.runtimeType.toString()}');
-        }
-        else if (subType.compareTo("TextView") == 0) {
-          text = getData(widget)?? '';
+        } else if (subType.compareTo("TextView") == 0) {
+          text = getData(widget) ?? '';
 
-          final TextStyle style = args['style']?? TextStyle();
-          final TextAlign align = args['align']?? TextAlign.left;
+          final TextStyle style = args['style'] ?? TextStyle();
+          final TextAlign align = args['align'] ?? TextAlign.left;
 
           if (maskingEnabled && !masked && maskValuePatterns != null) {
             for (final String pattern in maskValuePatterns!) {
               if (text!.contains(RegExp(pattern))) {
                 masked = true;
-                tlLogger.v('Masking matched content with RE: $pattern, text: $text');
+                tlLogger.v(
+                    'Masking matched content with RE: $pattern, text: $text');
                 break;
               }
             }
@@ -590,22 +636,24 @@ class _TlBinder extends WidgetsBindingObserver {
           if (masked) {
             try {
               text = await maskText(text!);
-            }
-            on TealeafException catch (te) {
+            } on TealeafException catch (te) {
               tlLogger.v('Unable to mask text. ${te.getMsg}');
             }
 
-            tlLogger.v("Text Layout masked text: $text, Widget: ${widget.runtimeType.toString()}, "
-              "Digest for MASKING: ${wp.widgetDigest()}");
-          }
-          else {
-            tlLogger.v("Text Layout text: $text, Widget: ${widget.runtimeType.toString()}");
+            tlLogger.v(
+                "Text Layout masked text: $text, Widget: ${widget.runtimeType.toString()}, "
+                "Digest for MASKING: ${wp.widgetDigest()}");
+          } else {
+            tlLogger.v(
+                "Text Layout text: $text, Widget: ${widget.runtimeType.toString()}");
           }
 
           font = {
             'family': style.fontFamily,
             'size': style.fontSize.toString(),
-            'bold': (FontWeight.values.indexOf(style.fontWeight!) > FontWeight.values.indexOf(FontWeight.normal)).toString(),
+            'bold': (FontWeight.values.indexOf(style.fontWeight!) >
+                    FontWeight.values.indexOf(FontWeight.normal))
+                .toString(),
             'italic': (style.fontStyle == FontStyle.italic).toString()
           };
 
@@ -634,7 +682,8 @@ class _TlBinder extends WidgetsBindingObserver {
             'hidden': (style.color!.opacity == 1.0).toString(),
             'colorPrimary': (style.foreground?.color ?? 0).toString(),
             'colorPrimaryDark': 0.toString(), // TBD: Dark theme??
-            'colorAccent': (style.decorationColor?.value ?? 0).toString(), // TBD: are this the same??
+            'colorAccent': (style.decorationColor?.value ?? 0)
+                .toString(), // TBD: are this the same??
           };
         }
 
@@ -644,13 +693,16 @@ class _TlBinder extends WidgetsBindingObserver {
         if (image != null) {
           tlLogger.v("Adding image to layouts....");
         }
-        tlLogger.v('--> Layout Flutter -- x: ${position.dx}, y: ${position.dy}, width: ${box.size.width.toInt()}, text: $text');
+        tlLogger.v(
+            '--> Layout Flutter -- x: ${position.dx}, y: ${position.dy}, width: ${box.size.width.toInt()}, text: $text');
 
         layouts.add(<String, dynamic>{
           'id': path,
           'cssId': wp.widgetDigest(),
           'idType': (-4).toString(),
-          'tlType': (image != null) ? 'image' : (text != null && text.contains('\n') ? 'textArea' : 'label'),
+          'tlType': (image != null)
+              ? 'image'
+              : (text != null && text.contains('\n') ? 'textArea' : 'label'),
           'type': type,
           'subType': subType,
           'position': <String, String>{
@@ -665,17 +717,19 @@ class _TlBinder extends WidgetsBindingObserver {
             'placeHolder': "", // TBD??
             'font': font
           },
-          if (image != null)  'image' : image,
-          if (aStyle != null) 'style' : aStyle,
-          if (accessibility != null) 'accessibility' : accessibility,
+          if (image != null) 'image': image,
+          if (aStyle != null) 'style': aStyle,
+          if (accessibility != null) 'accessibility': accessibility,
           'originalId': path.replaceAll("/", ""),
           'masked': '$masked'
         });
       }
     }
-    layoutParametersForGestures = hasGestures ? List.unmodifiable(layouts) : null;
+    layoutParametersForGestures =
+        hasGestures ? List.unmodifiable(layouts) : null;
 
-    tlLogger.v("WigetPath cache size, before: $pathCount, after: ${WidgetPath.size}, # of layouts: ${layouts.length}");
+    tlLogger.v(
+        "WigetPath cache size, before: $pathCount, after: ${WidgetPath.size}, # of layouts: ${layouts.length}");
 
     return layouts;
   }
@@ -687,8 +741,8 @@ class _Pinch {
 
   Offset? _startPosition;
   Offset? _updatePosition;
-  double  _scale = -1;
-  int     _fingers = 0;
+  double _scale = -1;
+  int _fingers = 0;
 
   set startPosition(Offset position) => _startPosition = position;
   set updatePosition(Offset position) => _updatePosition = position;
@@ -698,13 +752,17 @@ class _Pinch {
       _fingers = gesturePoints;
     }
   }
+
   Offset? get getStartPosition => _startPosition;
   Offset? get getUpdatePosition => _updatePosition;
-  double  get getScale => _scale;
-  int     get getMaxFingers => _fingers;
+  double get getScale => _scale;
+  int get getMaxFingers => _fingers;
 
   String pinchResult() {
-    if (_startPosition == null || _updatePosition == null || _scale == initScale || _fingers != 2) {
+    if (_startPosition == null ||
+        _updatePosition == null ||
+        _scale == initScale ||
+        _fingers != 2) {
       return "";
     }
     return directions[_scale < initScale ? 0 : 1];
@@ -716,9 +774,9 @@ class _Swipe {
 
   Offset? _startPosition;
   Offset? _updatePosition;
-  Duration _startTimestamp  = Duration();
+  Duration _startTimestamp = Duration();
   Duration _updateTimestamp = Duration();
-  Velocity? _velocity = Velocity(pixelsPerSecond: const Offset(0,0));
+  Velocity? _velocity = Velocity(pixelsPerSecond: const Offset(0, 0));
   String _direction = "";
 
   set startPosition(Offset position) => _startPosition = position;
@@ -731,7 +789,8 @@ class _Swipe {
   Velocity? get velocity => _velocity!;
   String get direction => _direction;
   String getStartTimestampString() => _startTimestamp.inMilliseconds.toString();
-  String getUpdateTimestampString() => _updateTimestamp.inMilliseconds.toString();
+  String getUpdateTimestampString() =>
+      _updateTimestamp.inMilliseconds.toString();
 
   String calculateSwipe() {
     if (_startPosition == null || _updatePosition == null) {
@@ -743,7 +802,8 @@ class _Swipe {
 
   String _getSwipeDirection(Offset offset) {
     final int axis = offset.dx.abs() < offset.dy.abs() ? 2 : 0;
-    final int direction = (axis == 0) ? (offset.dx < 0 ? 1 : 0) : (offset.dy < 0 ? 1 : 0);
+    final int direction =
+        (axis == 0) ? (offset.dx < 0 ? 1 : 0) : (offset.dy < 0 ? 1 : 0);
     return (_direction = directions[axis + direction]);
   }
 }
@@ -753,22 +813,22 @@ class _Swipe {
 class TealeafAopInstrumentation {
   TealeafAopInstrumentation();
 
-  static const String _tap           = "onTap";
-  static const String _doubleTap     = "onDoubleTap";
-  static const String _longPress     = "onLongPress";
-  static const String _onPanStart    = "onPanStart";
-  static const String _onPanEnd      = "onPanEnd";
-  static const String _onPanUpdate   = "onPanUpdate";
-  static const String _onScaleStart  = "onScaleStart";
+  static const String _tap = "onTap";
+  static const String _doubleTap = "onDoubleTap";
+  static const String _longPress = "onLongPress";
+  static const String _onPanStart = "onPanStart";
+  static const String _onPanEnd = "onPanEnd";
+  static const String _onPanUpdate = "onPanUpdate";
+  static const String _onScaleStart = "onScaleStart";
   static const String _onScaleUpdate = "onScaleUpdate";
-  static const String _onScaleEnd    = "onScaleEnd";
+  static const String _onScaleEnd = "onScaleEnd";
 
-  static const String _onVerticalDragStart    = "onVerticalDragStart";
-  static const String _onVerticalDragUpdate   = "onVerticalDragUpdate";
-  static const String _onVerticalDragEnd      = "onVerticalDragEnd";
-  static const String _onHorizontalDragStart  = "onHorizontalDragStart";
+  static const String _onVerticalDragStart = "onVerticalDragStart";
+  static const String _onVerticalDragUpdate = "onVerticalDragUpdate";
+  static const String _onVerticalDragEnd = "onVerticalDragEnd";
+  static const String _onHorizontalDragStart = "onHorizontalDragStart";
   static const String _onHorizontalDragUpdate = "onHorizontalDragUpdate";
-  static const String _onHorizontalDragEnd    = "onHorizontalDragEnd";
+  static const String _onHorizontalDragEnd = "onHorizontalDragEnd";
 
   /* Example ONLY of field instrumentation
   @pragma("vm:entry-point")
@@ -788,23 +848,27 @@ class TealeafAopInstrumentation {
       FlutterError.onError = wrap(FlutterError.onError, "Flutter onError");
 
       _TlBinder().init();
-      catchForLogging(rootWidget?? const Text("The main app widget is null!"));
+      catchForLogging(rootWidget ?? const Text("The main app widget is null!"));
 
       // Create watcher for scroll notifications to map to a swipe event (from top of render tree)
       pointcut.positionalParams?[0] = NotificationListener(
         child: rootWidget,
         onNotification: (Notification? notification) {
           if (notification is ScrollStartNotification) {
-            final ScrollStartNotification scrollStartNotification = notification;
-            final DragStartDetails? details = scrollStartNotification.dragDetails;
-            _TlBinder().startScroll(details?.globalPosition, details?.sourceTimeStamp);
-          }
-          else if (notification is ScrollUpdateNotification) {
-            final ScrollUpdateNotification scrollUpdateNotification = notification;
-            final DragUpdateDetails? details = scrollUpdateNotification.dragDetails;
-            _TlBinder().updateScroll(details?.globalPosition, details?.sourceTimeStamp);
-          }
-          else if (notification is ScrollEndNotification) {
+            final ScrollStartNotification scrollStartNotification =
+                notification;
+            final DragStartDetails? details =
+                scrollStartNotification.dragDetails;
+            _TlBinder()
+                .startScroll(details?.globalPosition, details?.sourceTimeStamp);
+          } else if (notification is ScrollUpdateNotification) {
+            final ScrollUpdateNotification scrollUpdateNotification =
+                notification;
+            final DragUpdateDetails? details =
+                scrollUpdateNotification.dragDetails;
+            _TlBinder().updateScroll(
+                details?.globalPosition, details?.sourceTimeStamp);
+          } else if (notification is ScrollEndNotification) {
             final ScrollEndNotification scrollEndNotification = notification;
             final DragEndDetails? details = scrollEndNotification.dragDetails;
             _TlBinder().endScroll(details?.velocity);
@@ -821,39 +885,47 @@ class TealeafAopInstrumentation {
   @Execute("package:flutter/src/widgets/text.dart", "Text", "-build")
   @pragma("vm:entry-point")
   dynamic _xxxTealeaf7(PointCut pointcut) {
-    final TimeIt timer = TimeIt(label: "Text Injection: (${pointcut.target.toString()}");
+    final TimeIt timer =
+        TimeIt(label: "Text Injection: (${pointcut.target.toString()}");
     try {
       return timer.execute(() {
         if (pointcut.target is Text) {
-          textHelper(pointcut, (widget) => widget.data ?? (widget.textSpan != null ? widget.textSpan.toPlainText() : ""));
+          textHelper(
+              pointcut,
+              (widget) =>
+                  widget.data ??
+                  (widget.textSpan != null
+                      ? widget.textSpan.toPlainText()
+                      : ""));
         }
-        return timer.execute(() => pointcut.proceed(), label: "Text build only");
-      },
-      label: "Total time for text build");
-    }
-    finally {
+        return timer.execute(() => pointcut.proceed(),
+            label: "Text build only");
+      }, label: "Total time for text build");
+    } finally {
       timer.showResults();
     }
   }
 
-  @Call("package:flutter/src/material/text_field.dart", "_TextFieldState", "+_TextFieldState")
+  @Call("package:flutter/src/material/text_field.dart", "_TextFieldState",
+      "+_TextFieldState")
   @pragma("vm:entry-point")
   static dynamic _xxxTealeaf8(PointCut pointcut) {
     final TimeIt timer = TimeIt();
     try {
       return timer.execute(() {
-        dynamic tfs = timer.execute(() => pointcut.proceed(), label: "_TextFieldState Constructor");
-        tfs.forcePressEnabled = false; // Initialize "late" variable (always reset in build)
+        dynamic tfs = timer.execute(() => pointcut.proceed(),
+            label: "_TextFieldState Constructor");
+        tfs.forcePressEnabled =
+            false; // Initialize "late" variable (always reset in build)
         return tfs;
-      },
-      label: "Total including setting late variable");
-    }
-    finally {
+      }, label: "Total including setting late variable");
+    } finally {
       timer.showResults();
     }
   }
 
-  @Execute("package:flutter/src/material/text_field.dart", "_TextFieldState", "-build")
+  @Execute("package:flutter/src/material/text_field.dart", "_TextFieldState",
+      "-build")
   @pragma("vm:entry-point")
   dynamic _xxxTealeaf9(PointCut pointcut) {
     final TimeIt timer = TimeIt(label: 'TextField Injection');
@@ -870,67 +942,76 @@ class TealeafAopInstrumentation {
                 // TBD: do we need to handle errorText, and any others?
               }
               return text;
-            }
-            on NoSuchMethodError {
-              tlLogger.v('The class object is not a TextField while attempting to get text data!');
+            } on NoSuchMethodError {
+              tlLogger.v(
+                  'The class object is not a TextField while attempting to get text data!');
               return "";
             }
           });
         }
-        return timer.execute(() => pointcut.proceed(), label: 'TextField build only');
+        return timer.execute(() => pointcut.proceed(),
+            label: 'TextField build only');
       });
-    }
-    finally {
+    } finally {
       timer.showResults();
     }
   }
 
   // TBD: Remove if TextField types deemed redundant because they incorporate a Text() object
-  @Execute("package:flutter/src/cupertino/text_field.dart", "CupertinoTextField", "-build")
+  @Execute("package:flutter/src/cupertino/text_field.dart",
+      "CupertinoTextField", "-build")
   @pragma("vm:entry-point")
-  dynamic _xxxTealeaf10(PointCut pointcut) {
-  }
+  dynamic _xxxTealeaf10(PointCut pointcut) {}
 
-  @Call("package:flutter/src/material/selectable_text.dart", "_SelectableTextState", "+_SelectableTextState")
+  @Call("package:flutter/src/material/selectable_text.dart",
+      "_SelectableTextState", "+_SelectableTextState")
   @pragma("vm:entry-point")
   static dynamic _xxxTealeaf11(PointCut pointcut) {
     final TimeIt timer = TimeIt();
     try {
       return timer.execute(() {
-        dynamic tfs = timer.execute(() => pointcut.proceed(), label: "_SelectableTextState Constructor");
-        tfs.forcePressEnabled = false; // Initialize "late" variable (always reset in build)
+        dynamic tfs = timer.execute(() => pointcut.proceed(),
+            label: "_SelectableTextState Constructor");
+        tfs.forcePressEnabled =
+            false; // Initialize "late" variable (always reset in build)
         return tfs;
-      },
-      label: "Total including setting late variable");
-    }
-    finally {
+      }, label: "Total including setting late variable");
+    } finally {
       timer.showResults();
     }
   }
 
-  @Execute("package:flutter/src/material/selectable_text.dart", "_SelectableTextState", "-build")
+  @Execute("package:flutter/src/material/selectable_text.dart",
+      "_SelectableTextState", "-build")
   @pragma("vm:entry-point")
   dynamic _xxxTealeaf12(PointCut pointcut) {
-    final TimeIt timer = TimeIt(label: "SelectableText Injection: (${pointcut.target.toString()}");
+    final TimeIt timer = TimeIt(
+        label: "SelectableText Injection: (${pointcut.target.toString()}");
     try {
       return timer.execute(() {
         final dynamic sts = pointcut.target;
         final dynamic stWidget = sts.widget;
 
         if (stWidget is SelectableText) {
-          textHelper(pointcut, (widget) => widget.data ?? (widget.textSpan != null ? widget.textSpan.toPlainText() : ""));
+          textHelper(
+              pointcut,
+              (widget) =>
+                  widget.data ??
+                  (widget.textSpan != null
+                      ? widget.textSpan.toPlainText()
+                      : ""));
         }
-        return timer.execute(() => pointcut.proceed(), label: "SelectableText build only");
-      },
-      label: "Total time for selectable text build");
-    }
-    finally {
+        return timer.execute(() => pointcut.proceed(),
+            label: "SelectableText build only");
+      }, label: "Total time for selectable text build");
+    } finally {
       timer.showResults();
     }
   }
 
   @pragma("vm:entry-point")
-  @Execute("package:flutter/src/widgets/image.dart", "_ImageState", "-_handleImageFrame")
+  @Execute("package:flutter/src/widgets/image.dart", "_ImageState",
+      "-_handleImageFrame")
   dynamic _xxxTealeaf13(PointCut pointcut) {
     final TimeIt timer = TimeIt(label: 'Image Injection for ready handler');
     try {
@@ -942,12 +1023,12 @@ class TealeafAopInstrumentation {
         if (wp != null) {
           final ImageInfo imageInfo = pointcut.positionalParams?[0];
           wp.parameters['image'] = imageInfo.image;
-          tlLogger.v('_ImageState._handleImageFrame. Widget hash: ${widget.hashCode}, image: ${wp.parameters['image']}');
+          tlLogger.v(
+              '_ImageState._handleImageFrame. Widget hash: ${widget.hashCode}, image: ${wp.parameters['image']}');
         }
         timer.execute(() => pointcut.proceed(), label: 'Set image handler');
       });
-    }
-    finally {
+    } finally {
       timer.showResults();
     }
   }
@@ -962,34 +1043,44 @@ class TealeafAopInstrumentation {
         final dynamic target = pointcut.target;
         final Widget widget = (target is Widget) ? target : target.widget;
 
-        tlLogger.v('_ImageState class. widget: ${widget.runtimeType.toString()}, hash: ${widget.hashCode}');
+        tlLogger.v(
+            '_ImageState class. widget: ${widget.runtimeType.toString()}, hash: ${widget.hashCode}');
 
-        final dynamic build = timer.execute(() => pointcut.proceed(), label: 'Image build only');
+        final dynamic build =
+            timer.execute(() => pointcut.proceed(), label: 'Image build only');
 
         final WidgetPath? cp = WidgetPath.getPath(widget.hashCode);
-        final WidgetPath  wp = WidgetPath.create(bc, hash: true);
+        final WidgetPath wp = WidgetPath.create(bc, hash: true);
         final String? semantics = cp?.parameters['semanticsLabel'];
 
         wp.addInstance(widget.hashCode);
 
         wp.addParameters(<String, dynamic>{
-          if (cp != null && cp.parameters.containsKey('image')) 'image': cp.parameters['image'],
+          if (cp != null && cp.parameters.containsKey('image'))
+            'image': cp.parameters['image'],
           'type': widget.runtimeType.toString(),
           'subType': 'ImageView',
-          if (semantics != null && semantics.isNotEmpty) 'accessibility': {'id': '/Image', 'label': '', 'hint': semantics},
+          if (semantics != null && semantics.isNotEmpty)
+            'accessibility': {'id': '/Image', 'label': '', 'hint': semantics},
           'data': (widget) async {
-            tlLogger.v('_ImageState class: ${target.toString()}, hash: ${wp.key}');
+            tlLogger
+                .v('_ImageState class: ${target.toString()}, hash: ${wp.key}');
             final dynamic image = wp.parameters['image'];
             if (image != null) {
               Uint8List data = Uint8List(1);
-              final bool useImageData = await _TlConfiguration().get('TealeafBasicConfig/GetImageDataOnScreenLayout')?? false;
+              final bool useImageData = await _TlConfiguration()
+                      .get('TealeafBasicConfig/GetImageDataOnScreenLayout') ??
+                  false;
               if (useImageData) {
-                final ByteData byteData = await image.toByteData(format: ImageByteFormat.rawUnmodified);
-                data = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+                final ByteData byteData = await image.toByteData(
+                    format: ImageByteFormat.rawUnmodified);
+                data = byteData.buffer.asUint8List(
+                    byteData.offsetInBytes, byteData.lengthInBytes);
               }
               final String width = '${image.width}';
               final String height = '${image.height}';
-              tlLogger.v('--> Image: # of bytes: ${data.length}, w: $width, h: $height, widget: ${widget.runtimeType.toString()}');
+              tlLogger.v(
+                  '--> Image: # of bytes: ${data.length}, w: $width, h: $height, widget: ${widget.runtimeType.toString()}');
               return <String, dynamic>{
                 'base64Image': data,
                 'value': '',
@@ -1004,8 +1095,7 @@ class TealeafAopInstrumentation {
         });
         return build;
       });
-    }
-    finally {
+    } finally {
       timer.showResults();
     }
   }
@@ -1073,8 +1163,9 @@ class TealeafAopInstrumentation {
           }
         });
 
-        return timer.execute(() =>
-            Listener(key: parms?["key"],
+        return timer.execute(
+            () => Listener(
+                key: parms?["key"],
                 onPointerDown: parms?["onPointerDown"],
                 onPointerMove: parms?["onPointerMove"],
                 onPointerUp: parms?["onPointerUp"],
@@ -1082,18 +1173,16 @@ class TealeafAopInstrumentation {
                 onPointerCancel: parms?["onPointerCancel"],
                 onPointerSignal: parms?["onPointerSignal"],
                 behavior: parms?["behavior"] ?? HitTestBehavior.deferToChild,
-                child: parms?["child"]
-            ),
-            label: 'Listener Constructor'
-        );
+                child: parms?["child"]),
+            label: 'Listener Constructor');
       });
-    }
-    finally {
+    } finally {
       timer.showResults();
     }
   }
 
-  @Call("package:flutter/src/widgets/gesture_detector.dart", "GestureDetector", "+GestureDetector")
+  @Call("package:flutter/src/widgets/gesture_detector.dart", "GestureDetector",
+      "+GestureDetector")
   @pragma("vm:entry-point")
   static dynamic _xxxTealeaf3(PointCut pointcut) {
     final TimeIt timer = TimeIt(label: 'GestureDetector Injection');
@@ -1101,11 +1190,14 @@ class TealeafAopInstrumentation {
       return timer.execute(() {
         final Map<dynamic, dynamic> params = pointcut.namedParams!;
         final Widget? child = params['child'];
-        final String childType = (child != null) ? child.runtimeType.toString() : '<no child>';
+        final String childType =
+            (child != null) ? child.runtimeType.toString() : '<no child>';
         final String childCode = (child != null) ? '${child.hashCode}' : '0';
-        Widget? gesture; // Note: this is set AFTER it is referenced in callback. On callback, the value has been set!
+        Widget?
+            gesture; // Note: this is set AFTER it is referenced in callback. On callback, the value has been set!
 
-        tlLogger.v('Gesture constructor child widget: $childType, child hash: $childCode');
+        tlLogger.v(
+            'Gesture constructor child widget: $childType, child hash: $childCode');
 
         // Simple gestures
         if (params.containsKey(_tap)) {
@@ -1141,18 +1233,26 @@ class TealeafAopInstrumentation {
           params[_onPanStart] = (DragStartDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onPanStart, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onPanStart,
+                offset: position,
+                timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
           };
         }
         if (params.containsKey(_onPanUpdate)) {
-        final dynamic userCallback = params[_onPanUpdate];
-        params[_onPanUpdate] = (DragUpdateDetails details) {
+          final dynamic userCallback = params[_onPanUpdate];
+          params[_onPanUpdate] = (DragUpdateDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onPanUpdate, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onPanUpdate,
+                offset: position,
+                timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1162,7 +1262,8 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onPanEnd];
           params[_onPanEnd] = (DragEndDetails details) {
             final Velocity velocity = details.velocity;
-            swipeGestureHelper(gesture: gesture, onType: _onPanEnd, velocity: velocity);
+            swipeGestureHelper(
+                gesture: gesture, onType: _onPanEnd, velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1174,7 +1275,11 @@ class TealeafAopInstrumentation {
           params[_onHorizontalDragStart] = (DragStartDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onHorizontalDragStart, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onHorizontalDragStart,
+                offset: position,
+                timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1185,7 +1290,11 @@ class TealeafAopInstrumentation {
           params[_onHorizontalDragUpdate] = (DragUpdateDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onHorizontalDragUpdate, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onHorizontalDragUpdate,
+                offset: position,
+                timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1195,7 +1304,10 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onHorizontalDragEnd];
           params[_onHorizontalDragEnd] = (DragEndDetails details) {
             final Velocity velocity = details.velocity;
-            swipeGestureHelper(gesture: gesture, onType: _onHorizontalDragEnd, velocity: velocity);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onHorizontalDragEnd,
+                velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1206,7 +1318,11 @@ class TealeafAopInstrumentation {
           params[_onVerticalDragStart] = (DragStartDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onVerticalDragStart, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onVerticalDragStart,
+                offset: position,
+                timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1217,7 +1333,11 @@ class TealeafAopInstrumentation {
           params[_onVerticalDragUpdate] = (DragUpdateDetails details) {
             final Offset position = details.globalPosition;
             final Duration? timestamp = details.sourceTimeStamp;
-            swipeGestureHelper(gesture: gesture, onType: _onVerticalDragUpdate, offset: position, timestamp: timestamp!);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onVerticalDragUpdate,
+                offset: position,
+                timestamp: timestamp!);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1227,7 +1347,10 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onVerticalDragEnd];
           params[_onVerticalDragEnd] = (DragEndDetails details) {
             final Velocity velocity = details.velocity;
-            swipeGestureHelper(gesture: gesture, onType: _onVerticalDragEnd, velocity: velocity);
+            swipeGestureHelper(
+                gesture: gesture,
+                onType: _onVerticalDragEnd,
+                velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1237,7 +1360,8 @@ class TealeafAopInstrumentation {
           final dynamic userCallback = params[_onScaleStart];
           params[_onScaleStart] = (ScaleStartDetails details) {
             final Offset position = details.focalPoint;
-            pinchGestureHelper(gesture: gesture, onType: _onScaleStart, offset: position);
+            pinchGestureHelper(
+                gesture: gesture, onType: _onScaleStart, offset: position);
             if (userCallback != null) {
               userCallback(details);
             }
@@ -1251,7 +1375,8 @@ class TealeafAopInstrumentation {
             final int fingers = details.pointerCount;
             tlLogger.v('ScaleUpdate, scale: $scale, fingers: $fingers');
 
-            pinchGestureHelper(gesture: gesture,
+            pinchGestureHelper(
+                gesture: gesture,
                 onType: _onScaleUpdate,
                 scale: scale,
                 fingers: fingers,
@@ -1266,14 +1391,18 @@ class TealeafAopInstrumentation {
           params[_onScaleEnd] = (ScaleEndDetails details) {
             final int fingers = details.pointerCount;
             final Velocity velocity = details.velocity;
-            pinchGestureHelper(gesture: gesture, onType: _onScaleEnd, fingers: fingers, velocity: velocity);
+            pinchGestureHelper(
+                gesture: gesture,
+                onType: _onScaleEnd,
+                fingers: fingers,
+                velocity: velocity);
             if (userCallback != null) {
               userCallback(details);
             }
           };
         }
-        gesture = timer.execute(() =>
-            GestureDetector(
+        gesture = timer.execute(
+            () => GestureDetector(
                 key: params['key'],
                 child: child,
                 onTap: params[_tap],
@@ -1298,17 +1427,20 @@ class TealeafAopInstrumentation {
                 onLongPressUp: params['onLongPressUp'],
                 onLongPressEnd: params['onLongPressEnd'],
                 onSecondaryLongPressDown: params['onSecondaryLongPressDown'],
-                onSecondaryLongPressCancel: params['onSecondaryLongPressCancel'],
+                onSecondaryLongPressCancel:
+                    params['onSecondaryLongPressCancel'],
                 onSecondaryLongPress: params['onSecondaryLongPress'],
                 onSecondaryLongPressStart: params['onSecondaryLongPressStart'],
-                onSecondaryLongPressMoveUpdate: params['onSecondaryLongPressMoveUpdate'],
+                onSecondaryLongPressMoveUpdate:
+                    params['onSecondaryLongPressMoveUpdate'],
                 onSecondaryLongPressUp: params['onSecondaryLongPressUp'],
                 onSecondaryLongPressEnd: params['onSecondaryLongPressEnd:'],
                 onTertiaryLongPressDown: params['onTertiaryLongPressDown'],
                 onTertiaryLongPressCancel: params['onTertiaryLongPressCancel'],
                 onTertiaryLongPress: params['onTertiaryLongPress:'],
                 onTertiaryLongPressStart: params['onTertiaryLongPressStart'],
-                onTertiaryLongPressMoveUpdate: params['onTertiaryLongPressMoveUpdate'],
+                onTertiaryLongPressMoveUpdate:
+                    params['onTertiaryLongPressMoveUpdate'],
                 onTertiaryLongPressUp: params['onTertiaryLongPressUp'],
                 onTertiaryLongPressEnd: params['onTertiaryLongPressEnd'],
                 onVerticalDragDown: params['onVerticalDragDown'],
@@ -1335,10 +1467,9 @@ class TealeafAopInstrumentation {
                 onScaleEnd: params[_onScaleEnd],
                 behavior: params['behavior'],
                 excludeFromSemantics: params['excludeFromSemantics'] ?? false,
-                dragStartBehavior: params['dragStartBehavior'] ?? DragStartBehavior.start
-            ),
-            label: 'GestureDetector Constructor'
-        );
+                dragStartBehavior:
+                    params['dragStartBehavior'] ?? DragStartBehavior.start),
+            label: 'GestureDetector Constructor');
         tlLogger.v('--> Gesture class created: ${gesture.hashCode}');
         for (dynamic key in params.keys) {
           // Add simple logging for all passed gestures in case we have no instrumentation for that callback
@@ -1349,38 +1480,42 @@ class TealeafAopInstrumentation {
         }
         return gesture;
       });
-    }
-    finally {
+    } finally {
       timer.showResults();
     }
   }
 
-  @Execute("package:flutter/src/widgets/gesture_detector.dart", "GestureDetector", "-build")
+  @Execute("package:flutter/src/widgets/gesture_detector.dart",
+      "GestureDetector", "-build")
   @pragma("vm:entry-point")
   dynamic _xxxTealeaf4(PointCut pointcut) {
     final TimeIt timer = TimeIt(label: 'GestureDetector Injection build');
     try {
       return timer.execute(() {
         Widget? widget = pointcut.target as Widget;
-        tlLogger.v('GestureDetector Build WIDGET: ${widget.runtimeType.toString()} ${widget.hashCode}');
+        tlLogger.v(
+            'GestureDetector Build WIDGET: ${widget.runtimeType.toString()} ${widget.hashCode}');
         final BuildContext bc = pointcut.positionalParams?[0];
-        final WidgetPath   wp = WidgetPath.create(bc, hash: true);
+        final WidgetPath wp = WidgetPath.create(bc, hash: true);
 
         wp.addInstance(widget.hashCode);
 
-        wp.addParameters(<String, dynamic>{ 'type': widget.runtimeType.toString()});
-        return timer.execute(() => pointcut.proceed(), label: 'GestureDetector build');
+        wp.addParameters(
+            <String, dynamic>{'type': widget.runtimeType.toString()});
+        return timer.execute(() => pointcut.proceed(),
+            label: 'GestureDetector build');
       });
-    }
-    finally {
+    } finally {
       timer.showResults();
     }
   }
 
-  @Call("package:tl_flutter_plugin/tl_flutter_plugin.dart", "PluginTealeaf", "+aspectdTest")
+  @Call("package:tl_flutter_plugin/tl_flutter_plugin.dart", "PluginTealeaf",
+      "+aspectdTest")
   @pragma("vm:entry-point")
   static bool _xxxTealeaf5(PointCut pointcut) {
-    tlLogger.v('[AspectD test]: call method return value modified false => true (AOP TEST)');
+    tlLogger.v(
+        '[AspectD test]: call method return value modified false => true (AOP TEST)');
     return true;
   }
 
@@ -1389,22 +1524,28 @@ class TealeafAopInstrumentation {
     final dynamic target = pointcut.target;
     final Widget widget = (target is Widget) ? target : target.widget;
 
-    tlLogger.v('Text widget type: ${widget.runtimeType.toString()}, context: ${bc.toString()}');
+    tlLogger.v(
+        'Text widget type: ${widget.runtimeType.toString()}, context: ${bc.toString()}');
 
-    final TextStyle style = pointcut.members?['style']?? DefaultTextStyle.of(bc).style?? TextStyle();
-    final TextAlign textAlign = pointcut.members?['textAlign']?? DefaultTextStyle.of(bc).textAlign?? TextAlign.left;
-    final String semantics = pointcut.members?['semanticsLabel']?? '';
+    final TextStyle style = pointcut.members?['style'] ??
+        DefaultTextStyle.of(bc).style ??
+        TextStyle();
+    final TextAlign textAlign = pointcut.members?['textAlign'] ??
+        DefaultTextStyle.of(bc).textAlign ??
+        TextAlign.left;
+    final String semantics = pointcut.members?['semanticsLabel'] ?? '';
     final WidgetPath wp = WidgetPath.create(bc, hash: true);
 
     wp.addInstance(widget.hashCode);
 
-    wp.addParameters(<String, dynamic> {
-      'type':    widget.runtimeType.toString(),
+    wp.addParameters(<String, dynamic>{
+      'type': widget.runtimeType.toString(),
       'subType': 'TextView',
-      'data':    getText,
-      'style':   style,
-      'align':   textAlign,
-      if (semantics.isNotEmpty) 'accessibility': {'id': '/Text', 'label': '', 'hint': semantics},
+      'data': getText,
+      'style': style,
+      'align': textAlign,
+      if (semantics.isNotEmpty)
+        'accessibility': {'id': '/Text', 'label': '', 'hint': semantics},
     });
   }
 
@@ -1425,9 +1566,15 @@ class TealeafAopInstrumentation {
     });
 
     if (semantics != null) {
-      final String? hint  = semantics!.properties.hint;
+      final String? hint = semantics!.properties.hint;
       final String? label = semantics!.properties.label;
-      accessibility.addAll({'accessibility': {'id': '/GestureDetector', 'label': label?? '', 'hint': hint?? ''}});
+      accessibility.addAll({
+        'accessibility': {
+          'id': '/GestureDetector',
+          'label': label ?? '',
+          'hint': hint ?? ''
+        }
+      });
     }
     return accessibility;
   }
@@ -1445,7 +1592,8 @@ class TealeafAopInstrumentation {
     PluginTealeaf.onTlPointerEvent(fields: fields);
   }
 
-  static Map<String, dynamic> errorDetailsHelper(FlutterErrorDetails fed, String type) {
+  static Map<String, dynamic> errorDetailsHelper(
+      FlutterErrorDetails fed, String type) {
     final Map<String, dynamic> data = {};
     final String errorString = fed.exception.runtimeType.toString();
 
@@ -1454,7 +1602,8 @@ class TealeafAopInstrumentation {
     data["stacktrace"] = fed.stack.toString();
     data["handled"] = true;
 
-    tlLogger.v("!!! Flutter exception, type: $type, class: $errorString, hash: ${fed.exception.hashCode}");
+    tlLogger.v(
+        "!!! Flutter exception, type: $type, class: $errorString, hash: ${fed.exception.hashCode}");
 
     return data;
   }
@@ -1465,8 +1614,14 @@ class TealeafAopInstrumentation {
     if (value != null && value is PointerEvent) {
       final PointerEvent pointerEvent = value;
 
-      map['position'] = { 'dx': pointerEvent.position.dx, 'dy': pointerEvent.position.dy };
-      map['localPosition'] = { 'dx': pointerEvent.localPosition.dx, 'dy': pointerEvent.localPosition.dy };
+      map['position'] = {
+        'dx': pointerEvent.position.dx,
+        'dy': pointerEvent.position.dy
+      };
+      map['localPosition'] = {
+        'dx': pointerEvent.localPosition.dx,
+        'dy': pointerEvent.localPosition.dy
+      };
       map['down'] = pointerEvent.down;
       map['kind'] = pointerEvent.kind.index;
       map['buttons'] = pointerEvent.buttons;
@@ -1478,7 +1633,8 @@ class TealeafAopInstrumentation {
     return map;
   }
 
-  static dynamic wrap(dynamic Function(FlutterErrorDetails fed)? f, String type) {
+  static dynamic wrap(
+      dynamic Function(FlutterErrorDetails fed)? f, String type) {
     if (f != null) {
       final Function(FlutterErrorDetails fed) copyF = f;
 
@@ -1498,7 +1654,8 @@ class TealeafAopInstrumentation {
     runZonedGuarded<Future<void>>(() async {
       runApp(appWidget);
     }, (dynamic e, StackTrace stackTrace) {
-      tlLogger.v('Uncaught Exception: ${e.toString()}\nstackTrace: ${stackTrace.toString()}');
+      tlLogger.v(
+          'Uncaught Exception: ${e.toString()}\nstackTrace: ${stackTrace.toString()}');
 
       final Map<String, dynamic> data = {};
       bool isLogException = false;
@@ -1506,24 +1663,23 @@ class TealeafAopInstrumentation {
       if (e is PlatformException) {
         final PlatformException pe = e;
         data["nativecode"] = pe.code;
-        data["nativemessage"] = pe.message?? "";
-        data["nativestacktrace"] = pe.stacktrace?? "";
+        data["nativemessage"] = pe.message ?? "";
+        data["nativestacktrace"] = pe.stacktrace ?? "";
         data["message"] = e.toString();
-      }
-      else if (e is TealeafException) {
+      } else if (e is TealeafException) {
         final TealeafException te = e;
 
-        data["nativecode"] = te.code?? '';
-        data["nativemessage"] = te.getNativeMsg?? '';
-        data["nativestacktrace"] = te.getNativeDetails?? '';
-        data["message"] = te.getMsg?? '';
-        isLogException = te.getMsg?.contains(TealeafException.logErrorMsg)?? false;
+        data["nativecode"] = te.code ?? '';
+        data["nativemessage"] = te.getNativeMsg ?? '';
+        data["nativestacktrace"] = te.getNativeDetails ?? '';
+        data["message"] = te.getMsg ?? '';
+        isLogException =
+            te.getMsg?.contains(TealeafException.logErrorMsg) ?? false;
       } else {
         String message = "";
         try {
-          message = e.message?? "";
-        }
-        on NoSuchMethodError {
+          message = e.message ?? "";
+        } on NoSuchMethodError {
           // TypeErrors, for example, do not have messages. But, let's try to
           // grab any that do have messages.
           tlLogger.v('No message with this type of Flutter exception');
@@ -1538,8 +1694,7 @@ class TealeafAopInstrumentation {
       // Prevent recursive calls if exception message can not be processed!!
       if (isLogException) {
         tlLogger.v("Not logging an uncaught log exception message");
-      }
-      else {
+      } else {
         PluginTealeaf.onTlException(data: data);
       }
     });
@@ -1551,8 +1706,7 @@ class TealeafAopInstrumentation {
 
     try {
       gestureTarget = widget.child.runtimeType.toString();
-    }
-    on NoSuchMethodError {
+    } on NoSuchMethodError {
       gestureTarget = wp.parentWidgetType!;
     }
     return gestureTarget;
@@ -1560,7 +1714,8 @@ class TealeafAopInstrumentation {
 
   static void gestureHelper({Widget? gesture, String? gestureType}) async {
     if (gesture == null) {
-      tlLogger.w('Warning: Gesture is null in gestureHelper, type: ${gestureType?? "<NONE>"}');
+      tlLogger.w(
+          'Warning: Gesture is null in gestureHelper, type: ${gestureType ?? "<NONE>"}');
       return;
     }
     final int hashCode = gesture.hashCode;
@@ -1571,23 +1726,28 @@ class TealeafAopInstrumentation {
       final String gestureTarget = getGestureTarget(wp);
       final Map<String, dynamic> accessibility = checkForSemantics(wp);
 
-      tlLogger.v('${gestureType!.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v(
+          '${gestureType!.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
       tlLogger.v('--> Path: ${wp.widgetPath()}, digest: ${wp.widgetDigest()}');
 
       await PluginTealeaf.onTlGestureEvent(
-        gesture: gestureType,
-        id: wp.widgetPath(),
-        target: gestureTarget,
-        data: accessibility.isNotEmpty ? accessibility : null,
-        layoutParameters: _TlBinder.layoutParametersForGestures
-      );
-    }
-    else {
-      tlLogger.v("ERROR: ${gesture.runtimeType.toString()} gesture not found for hashcode: $hashCode");
+          gesture: gestureType,
+          id: wp.widgetPath(),
+          target: gestureTarget,
+          data: accessibility.isNotEmpty ? accessibility : null,
+          layoutParameters: _TlBinder.layoutParametersForGestures);
+    } else {
+      tlLogger.v(
+          "ERROR: ${gesture.runtimeType.toString()} gesture not found for hashcode: $hashCode");
     }
   }
 
-  static void swipeGestureHelper({required Widget? gesture, required String onType, Offset? offset, Duration? timestamp, Velocity? velocity}) async {
+  static void swipeGestureHelper(
+      {required Widget? gesture,
+      required String onType,
+      Offset? offset,
+      Duration? timestamp,
+      Velocity? velocity}) async {
     if (gesture == null) {
       tlLogger.w('Warning: Gesture is null in swipeGestureHelper');
       return;
@@ -1599,63 +1759,91 @@ class TealeafAopInstrumentation {
       final BuildContext? context = wp!.context;
       final String gestureTarget = getGestureTarget(wp);
 
-      tlLogger.v('${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v(
+          '${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
       tlLogger.v('--> Path: ${wp.widgetPath()}, digest: ${wp.widgetDigest()}');
 
       switch (onType) {
-        case _onPanStart: case _onHorizontalDragStart: case _onVerticalDragStart: {
-          final _Swipe swipe = _Swipe();
-          swipe.startPosition = offset!;
-          swipe.startTimeStamp = timestamp!;
-          wp.addParameters(<String, dynamic> {'swipe' : swipe});
-          break;
-        }
-        case _onPanUpdate: case _onHorizontalDragUpdate: case _onVerticalDragUpdate: {
-          if (wp.parameters.containsKey('swipe')) {
-            final _Swipe swipe = wp.parameters['swipe'];
-            swipe.updatePosition = offset!;
-            swipe.updateTimestamp = timestamp!;
+        case _onPanStart:
+        case _onHorizontalDragStart:
+        case _onVerticalDragStart:
+          {
+            final _Swipe swipe = _Swipe();
+            swipe.startPosition = offset!;
+            swipe.startTimeStamp = timestamp!;
+            wp.addParameters(<String, dynamic>{'swipe': swipe});
+            break;
           }
-          break;
-        }
-        case _onPanEnd: case _onHorizontalDragEnd: case _onVerticalDragEnd: {
-          if (wp.parameters.containsKey('swipe')) {
-            final _Swipe swipe = wp.parameters['swipe'];
-            final String direction = swipe.calculateSwipe();
-            if (direction.isNotEmpty) {
-              final Offset start = swipe.getStartPosition!;
-              final Offset end   = swipe.getUpdatePosition!;
-              final Map<String, dynamic> accessibility = checkForSemantics(wp);
-
-              wp.parameters.clear();
-              tlLogger.v('Swipe start: ${DateTime.now().millisecondsSinceEpoch}');
-              await PluginTealeaf.onTlGestureEvent(
-                gesture: 'swipe',
-                id: wp.widgetPath(),
-                target: gestureTarget,
-                data: <String, dynamic> {
-                  'pointer1':  {'dx': start.dx, 'dy': start.dy, 'ts': swipe.getStartTimestampString()},
-                  'pointer2':  {'dx': end.dx,   'dy': end.dy,   'ts': swipe.getUpdateTimestampString()},
-                  'velocity':  {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
-                  'direction': direction,
-                  ...accessibility,
-                },
-                layoutParameters: _TlBinder.layoutParametersForGestures
-              );
+        case _onPanUpdate:
+        case _onHorizontalDragUpdate:
+        case _onVerticalDragUpdate:
+          {
+            if (wp.parameters.containsKey('swipe')) {
+              final _Swipe swipe = wp.parameters['swipe'];
+              swipe.updatePosition = offset!;
+              swipe.updateTimestamp = timestamp!;
             }
+            break;
           }
-          break;
-        }
+        case _onPanEnd:
+        case _onHorizontalDragEnd:
+        case _onVerticalDragEnd:
+          {
+            if (wp.parameters.containsKey('swipe')) {
+              final _Swipe swipe = wp.parameters['swipe'];
+              final String direction = swipe.calculateSwipe();
+              if (direction.isNotEmpty) {
+                final Offset start = swipe.getStartPosition!;
+                final Offset end = swipe.getUpdatePosition!;
+                final Map<String, dynamic> accessibility =
+                    checkForSemantics(wp);
+
+                wp.parameters.clear();
+                tlLogger
+                    .v('Swipe start: ${DateTime.now().millisecondsSinceEpoch}');
+                await PluginTealeaf.onTlGestureEvent(
+                    gesture: 'swipe',
+                    id: wp.widgetPath(),
+                    target: gestureTarget,
+                    data: <String, dynamic>{
+                      'pointer1': {
+                        'dx': start.dx,
+                        'dy': start.dy,
+                        'ts': swipe.getStartTimestampString()
+                      },
+                      'pointer2': {
+                        'dx': end.dx,
+                        'dy': end.dy,
+                        'ts': swipe.getUpdateTimestampString()
+                      },
+                      'velocity': {
+                        'dx': velocity?.pixelsPerSecond.dx,
+                        'dy': velocity?.pixelsPerSecond.dy
+                      },
+                      'direction': direction,
+                      ...accessibility,
+                    },
+                    layoutParameters: _TlBinder.layoutParametersForGestures);
+              }
+            }
+            break;
+          }
         default:
           break;
       }
-    }
-    else {
-      tlLogger.v("ERROR: ${gesture.runtimeType.toString()} not found for hashcode: $hashCode");
+    } else {
+      tlLogger.v(
+          "ERROR: ${gesture.runtimeType.toString()} not found for hashcode: $hashCode");
     }
   }
 
-  static void pinchGestureHelper({required Widget? gesture, required String onType, Offset? offset, double? scale, Velocity? velocity, int fingers=0}) async {
+  static void pinchGestureHelper(
+      {required Widget? gesture,
+      required String onType,
+      Offset? offset,
+      double? scale,
+      Velocity? velocity,
+      int fingers = 0}) async {
     if (gesture == null) {
       tlLogger.w('Warning: Gesture is null in pinchGestureHelper');
       return;
@@ -1668,58 +1856,65 @@ class TealeafAopInstrumentation {
       final String gestureTarget = getGestureTarget(wp);
       final Map<String, dynamic> accessibility = checkForSemantics(wp);
 
-      tlLogger.v('${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v(
+          '${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
 
       switch (onType) {
-        case _onScaleStart: {
-          final _Pinch pinch = _Pinch();
-          pinch.startPosition = offset!;
-          wp.addParameters(<String, dynamic> {'pinch' : pinch});
-          break;
-        }
-        case _onScaleUpdate: {
-          if (wp.parameters.containsKey('pinch')) {
-            final _Pinch pinch = wp.parameters['pinch'];
-            pinch.updatePosition = offset!;
-            pinch.scale = scale!;
-            pinch.fingers = fingers;
+        case _onScaleStart:
+          {
+            final _Pinch pinch = _Pinch();
+            pinch.startPosition = offset!;
+            wp.addParameters(<String, dynamic>{'pinch': pinch});
+            break;
           }
-          break;
-        }
-        case _onScaleEnd: {
-          if (wp.parameters.containsKey('pinch')) {
-            final _Pinch pinch = wp.parameters['pinch'];
-            pinch.fingers = fingers;
-            final String direction = pinch.pinchResult();
-            tlLogger.v('--> Pinch, fingers: ${pinch.getMaxFingers}, direction: $direction');
-
-            if (direction.isNotEmpty) {
-              final Offset start = pinch.getStartPosition!;
-              final Offset end   = pinch.getUpdatePosition!;
-              wp.parameters.clear();
-              await PluginTealeaf.onTlGestureEvent(
-                  gesture: 'pinch',
-                  id: wp.widgetPath(),
-                  target: gestureTarget,
-                  data: <String, dynamic> {
-                    'pointer1':  {'dx': start.dx, 'dy': start.dy},
-                    'pointer2':  {'dx': end.dx,   'dy': end.dy},
-                    'direction': direction,
-                    'velocity':  {'dx': velocity?.pixelsPerSecond.dx, 'dy': velocity?.pixelsPerSecond.dy},
-                    ...accessibility,
-                  },
-                  layoutParameters: _TlBinder.layoutParametersForGestures
-              );
+        case _onScaleUpdate:
+          {
+            if (wp.parameters.containsKey('pinch')) {
+              final _Pinch pinch = wp.parameters['pinch'];
+              pinch.updatePosition = offset!;
+              pinch.scale = scale!;
+              pinch.fingers = fingers;
             }
+            break;
           }
-          break;
-        }
+        case _onScaleEnd:
+          {
+            if (wp.parameters.containsKey('pinch')) {
+              final _Pinch pinch = wp.parameters['pinch'];
+              pinch.fingers = fingers;
+              final String direction = pinch.pinchResult();
+              tlLogger.v(
+                  '--> Pinch, fingers: ${pinch.getMaxFingers}, direction: $direction');
+
+              if (direction.isNotEmpty) {
+                final Offset start = pinch.getStartPosition!;
+                final Offset end = pinch.getUpdatePosition!;
+                wp.parameters.clear();
+                await PluginTealeaf.onTlGestureEvent(
+                    gesture: 'pinch',
+                    id: wp.widgetPath(),
+                    target: gestureTarget,
+                    data: <String, dynamic>{
+                      'pointer1': {'dx': start.dx, 'dy': start.dy},
+                      'pointer2': {'dx': end.dx, 'dy': end.dy},
+                      'direction': direction,
+                      'velocity': {
+                        'dx': velocity?.pixelsPerSecond.dx,
+                        'dy': velocity?.pixelsPerSecond.dy
+                      },
+                      ...accessibility,
+                    },
+                    layoutParameters: _TlBinder.layoutParametersForGestures);
+              }
+            }
+            break;
+          }
         default:
           break;
       }
-    }
-    else {
-      tlLogger.v("ERROR: ${gesture.runtimeType.toString()} not found for hashcode: $hashCode");
+    } else {
+      tlLogger.v(
+          "ERROR: ${gesture.runtimeType.toString()} not found for hashcode: $hashCode");
     }
   }
 }

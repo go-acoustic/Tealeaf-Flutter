@@ -8,7 +8,9 @@ class DebugOnlyFilter extends LogFilter {
     if (kReleaseMode) {
       return event.level == Level.error;
     }
-    return (event.level == Level.debug || event.level == Level.verbose || event.level == Level.error);
+    return (event.level == Level.debug ||
+        event.level == Level.verbose ||
+        event.level == Level.error);
   }
 }
 
@@ -33,10 +35,11 @@ final dynamic _prettyPrinter = PrettyPrinter(
   printEmojis: false, // Print an emoji for each log message
 );
 
-final dynamic _verbosePrinter = io.Platform.isIOS ? _prettyPrinter : SimplePrinter();
+final dynamic _verbosePrinter =
+    io.Platform.isIOS ? _prettyPrinter : SimplePrinter();
 
 final Logger tlLogger = Logger(
-  filter:  DebugOnlyFilter(),
+  filter: DebugOnlyFilter(),
   printer: HybridPrinter(_prettyPrinter, verbose: _verbosePrinter),
-  output:  ConsoleOutput(),
+  output: ConsoleOutput(),
 );

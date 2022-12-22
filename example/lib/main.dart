@@ -21,15 +21,15 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   static const String undefined = 'undefined';
 
-  String _platformVersion  = undefined;
-  String _pluginVersion    = undefined;
-  String _tealeafVersion   = undefined;
+  String _platformVersion = undefined;
+  String _pluginVersion = undefined;
+  String _tealeafVersion = undefined;
   String _tealeafSessionId = undefined;
-  String _appKey           = undefined;
-  bool   _aspectdEnabled   = false;
-  bool   _pinch            = false;
-  bool   _showExceptionMsg = true;
-  static int count         = 0;
+  String _appKey = undefined;
+  bool _aspectdEnabled = false;
+  bool _pinch = false;
+  bool _showExceptionMsg = true;
+  static int count = 0;
 
   TextEditingController textEditingController = TextEditingController();
   Widget imgHolder = const Center(child: Icon(Icons.image));
@@ -54,14 +54,18 @@ class _MyAppState extends State<MyApp> {
     textEditingController.dispose();
     super.dispose();
   }
+
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    String platformVersion, tealeafVersion, tealeafSessionId, pluginVersion, appKey;
+    String platformVersion,
+        tealeafVersion,
+        tealeafSessionId,
+        pluginVersion,
+        appKey;
     // Platform messages may fail, so we use a try/catch TealeafException.
     // We also handle the message potentially returning null.
     try {
-      platformVersion =
-          await PluginTealeaf.platformVersion;
+      platformVersion = await PluginTealeaf.platformVersion;
     } on TealeafException {
       platformVersion = 'Failed to get platform version.';
     }
@@ -97,11 +101,11 @@ class _MyAppState extends State<MyApp> {
       tealeafSessionId = '${tealeafSessionId.substring(0, 32)}...';
     }
     setState(() {
-      _platformVersion  = platformVersion;
-      _tealeafVersion   = tealeafVersion;
+      _platformVersion = platformVersion;
+      _tealeafVersion = tealeafVersion;
       _tealeafSessionId = tealeafSessionId;
-      _pluginVersion    = pluginVersion;
-      _appKey           = appKey;
+      _pluginVersion = pluginVersion;
+      _appKey = appKey;
     });
   }
 
@@ -113,18 +117,22 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Tealeaf plugin (SDK) example app'),
         ),
         body: SwipeOrPinchDetector(
-          pinch: _pinch,
-          onPinch: (double? scale) => debugPrint('PINCH (main.dart), scale: $scale'),
-          onSwipe: (dir, offset) => debugPrint('SWIPE (main.dart), direction: ${dir.toString()}, x,y: ${offset.dx}.${offset.dy}'),
-          child: SingleChildScrollView(child: Center(
-          child: Column(children: [
-            const Padding(padding: EdgeInsets.only(top: 10.0)),
-            const Image(
-              height:70,
-              image: NetworkImage('https://flutter.github.io/assets-for-api-docs/assets/widgets/owl.jpg'),
-            ),
-            const Padding(padding: EdgeInsets.only(top: 15.0)),
-            /*
+            pinch: _pinch,
+            onPinch: (double? scale) =>
+                debugPrint('PINCH (main.dart), scale: $scale'),
+            onSwipe: (dir, offset) => debugPrint(
+                'SWIPE (main.dart), direction: ${dir.toString()}, x,y: ${offset.dx}.${offset.dy}'),
+            child: SingleChildScrollView(
+                child: Center(
+              child: Column(children: [
+                const Padding(padding: EdgeInsets.only(top: 10.0)),
+                const Image(
+                  height: 70,
+                  image: NetworkImage(
+                      'https://flutter.github.io/assets-for-api-docs/assets/widgets/owl.jpg'),
+                ),
+                const Padding(padding: EdgeInsets.only(top: 15.0)),
+                /*
             TextField(
               controller: textEditingController,
               onChanged: (s) {
@@ -146,20 +154,18 @@ class _MyAppState extends State<MyApp> {
               )
             ),
             */
-            Row (
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Swipe"),
-                Radio(
-                  value: false,
-                  groupValue: _pinch,
-                  onChanged: (value) {
-                    setState(() => _pinch = value as bool);
-                  },
-                  activeColor: Colors.green,
-                ),
-                const Padding(padding: EdgeInsets.only(right: 15.0)),
-                const Text("Pinch"),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Text("Swipe"),
+                  Radio(
+                    value: false,
+                    groupValue: _pinch,
+                    onChanged: (value) {
+                      setState(() => _pinch = value as bool);
+                    },
+                    activeColor: Colors.green,
+                  ),
+                  const Padding(padding: EdgeInsets.only(right: 15.0)),
+                  const Text("Pinch"),
                   Radio(
                     value: true,
                     groupValue: _pinch,
@@ -168,71 +174,74 @@ class _MyAppState extends State<MyApp> {
                     },
                     activeColor: Colors.green,
                   )
-              ]
-            ),
-            const Padding(padding: EdgeInsets.only(top: 205.0)),
-            Text('Running on: $_platformVersion'),
-            Text('Tealeaf library version: $_tealeafVersion'),
-            Text('Tealeaf plugin version: $_pluginVersion'),
-            Text('AspectD enabled: $_aspectdEnabled'),
-            const Padding(padding: EdgeInsets.only(top: 10.0)),
-            Text('AppKey: $_appKey'),
-            const Text('Tealeaf SaaS Session ID: '),
-            SelectableText(_tealeafSessionId),
-            const Padding(padding: EdgeInsets.only(top: 20.0)),
-            Text('Taps: $count'),
-            const Padding(padding: EdgeInsets.only(bottom: 20.0)),
-            if (_showExceptionMsg) GestureDetector(
-              child: const Text("Tap on me to cause an exception!", semanticsLabel: 'Expires in 15 seconds'),
-              onTap: (){
-                debugPrint("User wanted an exception thrown");
-                throw Exception("Test logging of uncaught Flutter exception");
-              }
-            ),
-            const Padding(padding: EdgeInsets.only(bottom: 20.0)),
-            Column(
-              children:
-                <Widget>[
-                  Text('Http list size: ${httpList.length}'),
-                  ElevatedButton(
-                    onPressed: () async {
-                      List<dynamic> list = await connectionExample("https://jsonplaceholder.typicode.com/posts");
-                      setState(() {
-                        httpList = list;
-                      });
-                    },
-                    child: const Text("http get"),)
-                ],
-              ),
-            const Padding(padding: EdgeInsets.only(bottom: 40.0)),
-            Semantics(
-              hint: "my hint",
-              label: "my label",
-              child: GestureDetector(
-                child: Stack(alignment: AlignmentDirectional.center, children: [
-                  Container(
-                    width:  55.0,
-                    height: 55.0,
-                    decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)
-                  ),
-                  const Icon(Icons.add)
                 ]),
-                onTap: () {
-                  debugPrint("Incremented counter");
-                  setState(() {
-                    count += 1;
-                  });
-                },
-                onLongPress: () {
-                  debugPrint("Incremented counter (twice)");
-                  setState(() {
-                    count += 2;
-                  });
-                }
-              )
-            ),
-          ]),
-        ))),
+                const Padding(padding: EdgeInsets.only(top: 205.0)),
+                Text('Running on: $_platformVersion'),
+                Text('Tealeaf library version: $_tealeafVersion'),
+                Text('Tealeaf plugin version: $_pluginVersion'),
+                Text('AspectD enabled: $_aspectdEnabled'),
+                const Padding(padding: EdgeInsets.only(top: 10.0)),
+                Text('AppKey: $_appKey'),
+                const Text('Tealeaf SaaS Session ID: '),
+                SelectableText(_tealeafSessionId),
+                const Padding(padding: EdgeInsets.only(top: 20.0)),
+                Text('Taps: $count'),
+                const Padding(padding: EdgeInsets.only(bottom: 20.0)),
+                if (_showExceptionMsg)
+                  GestureDetector(
+                      child: const Text("Tap on me to cause an exception!",
+                          semanticsLabel: 'Expires in 15 seconds'),
+                      onTap: () {
+                        debugPrint("User wanted an exception thrown");
+                        throw Exception(
+                            "Test logging of uncaught Flutter exception");
+                      }),
+                const Padding(padding: EdgeInsets.only(bottom: 20.0)),
+                Column(
+                  children: <Widget>[
+                    Text('Http list size: ${httpList.length}'),
+                    ElevatedButton(
+                      onPressed: () async {
+                        List<dynamic> list = await connectionExample(
+                            "https://jsonplaceholder.typicode.com/posts");
+                        setState(() {
+                          httpList = list;
+                        });
+                      },
+                      child: const Text("http get"),
+                    )
+                  ],
+                ),
+                const Padding(padding: EdgeInsets.only(bottom: 40.0)),
+                Semantics(
+                    hint: "my hint",
+                    label: "my label",
+                    child: GestureDetector(
+                        child: Stack(
+                            alignment: AlignmentDirectional.center,
+                            children: [
+                              Container(
+                                  width: 55.0,
+                                  height: 55.0,
+                                  decoration: const BoxDecoration(
+                                      color: Colors.blue,
+                                      shape: BoxShape.circle)),
+                              const Icon(Icons.add)
+                            ]),
+                        onTap: () {
+                          debugPrint("Incremented counter");
+                          setState(() {
+                            count += 1;
+                          });
+                        },
+                        onLongPress: () {
+                          debugPrint("Incremented counter (twice)");
+                          setState(() {
+                            count += 2;
+                          });
+                        })),
+              ]),
+            ))),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
             debugPrint("FAB onPressed!");
@@ -261,12 +270,11 @@ class _MyAppState extends State<MyApp> {
     }
     */
     PluginTealeaf.tlApplicationCustomEvent(
-      eventName: "Custom test event",
-      customData: {
-        "data1": "END OF UI BUILD",
-        "time": DateTime.now().toString()
-      }
-    );
+        eventName: "Custom test event",
+        customData: {
+          "data1": "END OF UI BUILD",
+          "time": DateTime.now().toString()
+        });
     return w;
   }
 

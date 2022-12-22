@@ -15,9 +15,10 @@ class TealeafAopInstrumentationHttp {
     final Object request = pointCut.positionalParams?[0];
     final int hash = request.hashCode;
 
-    tlLogger.v("TL http BaseClient: ${request.toString()}, request hash: $hash, @${startTime.millisecondsSinceEpoch}");
+    tlLogger.v(
+        "TL http BaseClient: ${request.toString()}, request hash: $hash, @${startTime.millisecondsSinceEpoch}");
 
-    _TimedMap<int,int>().add(hash, startTime.millisecondsSinceEpoch);
+    _TimedMap<int, int>().add(hash, startTime.millisecondsSinceEpoch);
 
     return pointCut.proceed();
   }
@@ -27,7 +28,8 @@ class TealeafAopInstrumentationHttp {
   static Object _xxxTealeaf21(PointCut pointCut) {
     tlLogger.v("TL http response.fromStream: ${pointCut.toString()}");
 
-    final Future<http.Response> result = pointCut.proceed() as Future<http.Response>;
+    final Future<http.Response> result =
+        pointCut.proceed() as Future<http.Response>;
 
     result.whenComplete(() async {
       final http.Response response = await result;
@@ -38,14 +40,15 @@ class TealeafAopInstrumentationHttp {
       final int start = _TimedMap<int, int>().remove(hash) ?? 0;
       final int done = doneTime.millisecondsSinceEpoch;
 
-      tlLogger.v("http Response is ready: ${response.toString()}, request hash: $hash, start: $start,  done: $done");
+      tlLogger.v(
+          "http Response is ready: ${response.toString()}, request hash: $hash, start: $start,  done: $done");
 
       if (response.contentLength != null) {
         PluginTealeaf.tlConnection(
             url: url,
             statusCode: response.statusCode,
-            description: response.reasonPhrase?? '',
-            responseSize: response.contentLength?? 0,
+            description: response.reasonPhrase ?? '',
+            responseSize: response.contentLength ?? 0,
             initTime: start,
             loadTime: done);
       }
@@ -55,17 +58,17 @@ class TealeafAopInstrumentationHttp {
   }
 }
 
-class _TimedMap<K,V> {
+class _TimedMap<K, V> {
   static const int defaultTO = 30 * 1000; //milliseconds
-  static const int frequency = 5;         // secs
+  static const int frequency = 5; // secs
   static bool running = false;
 
-  V?   data;
-  int  start = 0;
-  int  timeout = 0;
+  V? data;
+  int start = 0;
+  int timeout = 0;
   final int defaultTimeout;
 
-  static Map<dynamic,dynamic> map = {};
+  static Map<dynamic, dynamic> map = {};
 
   _TimedMap({this.defaultTimeout = defaultTO});
 
@@ -78,7 +81,7 @@ class _TimedMap<K,V> {
   }
 
   V? remove(K key) {
-    final _TimedMap<K,V> item = map.remove(key);
+    final _TimedMap<K, V> item = map.remove(key);
     return item.data;
   }
 
@@ -89,13 +92,13 @@ class _TimedMap<K,V> {
     }
     running = true;
 
-    Future.delayed(const Duration(seconds: frequency), ()
-    {
+    Future.delayed(const Duration(seconds: frequency), () {
       tlLogger.v("Running check for map timeouts");
 
       dynamic keys = map.keys.where((item) {
         final _TimedMap<K, V> value = map[item];
-        return (DateTime.now().millisecondsSinceEpoch - value.start) > value.timeout;
+        return (DateTime.now().millisecondsSinceEpoch - value.start) >
+            value.timeout;
       }).toList(growable: false);
 
       for (K key in keys) {

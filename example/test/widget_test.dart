@@ -20,18 +20,18 @@ void main() {
       find.byWidgetPredicate((Widget widget) {
         bool match = false;
         if (widget is Text) {
-          final String text = widget.data?? '<null text>';
+          final String text = widget.data ?? '<null text>';
 
           match = text.startsWith('Running on:');
           debugPrint('Platform version Widget text: $text, found: $match');
         }
         return match;
       }
-      /*
+          /*
         (Widget widget) => widget != null && widget is Text &&
                            widget.data.startsWith('Running on:'),
       */
-      ),
+          ),
       findsOneWidget,
     );
   });

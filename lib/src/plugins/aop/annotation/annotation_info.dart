@@ -5,13 +5,14 @@
 class AnnotationInfo {
   /// AnnotationInfo default constructor.
   @pragma('vm:entry-point')
-  const AnnotationInfo(
-      {required this.importUri,
-      required this.clsName,
-      this.methodName,
-      this.lineNum,
-      this.isRegex = false,
-      this.superCls,});
+  const AnnotationInfo({
+    required this.importUri,
+    required this.clsName,
+    this.methodName,
+    this.lineNum,
+    this.isRegex = false,
+    this.superCls,
+  });
 
   /// Indicating which dart file to operate on.
   final String importUri;

@@ -1,4 +1,5 @@
 import 'logger.dart';
+
 ///
 /// Class to time a section of AOP code
 ///
@@ -12,9 +13,10 @@ class TimeIt {
 
   dynamic execute(Function function, {String? label}) {
     final DateTime start = DateTime.now();
-    final String prefix = label?? this.label;
+    final String prefix = label ?? this.label;
     final dynamic result = function();
-    durations.add(DateTime.now().millisecondsSinceEpoch - start.millisecondsSinceEpoch);
+    durations.add(
+        DateTime.now().millisecondsSinceEpoch - start.millisecondsSinceEpoch);
     tlLogger.v('$prefix required ${durations.last} ms');
     return result;
   }
@@ -22,6 +24,6 @@ class TimeIt {
   int elapsed() => durations.isNotEmpty ? durations.first : 0;
   int diff() => durations.length == 2 ? (durations[1] - durations[0]) : 0;
 
-  void showResults() => tlLogger.v('$label. AOP part: ${diff()} ms, injected function part: ${elapsed()} ms');
+  void showResults() => tlLogger.v(
+      '$label. AOP part: ${diff()} ms, injected function part: ${elapsed()} ms');
 }
-

@@ -11,7 +11,7 @@ class Call extends AnnotationInfo {
 
   @pragma('vm:entry-point')
   const Call._(String importUri, String clsName, String methodName,
-      {bool isRegex=false, this.excludeCoreLib=false})
+      {bool isRegex = false, this.excludeCoreLib = false})
       : super(
             importUri: importUri,
             clsName: clsName,

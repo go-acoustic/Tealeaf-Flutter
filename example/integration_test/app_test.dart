@@ -8,7 +8,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Tealeaf example app end-to-end integration test', () {
-    testWidgets('tap on the floating action button, verify counter (aop insertion)', (tester) async {
+    testWidgets(
+        'tap on the floating action button, verify counter (aop insertion)',
+        (tester) async {
       app.main();
 
       await tester.pumpAndSettle();
@@ -17,7 +19,8 @@ void main() {
       expect(find.text('\nTaps: 0'), findsOneWidget);
 
       // Finds the floating action button to tap on.
-      final Finder fab = find.byTooltip('Increment the counter by pressing this button');
+      final Finder fab =
+          find.byTooltip('Increment the counter by pressing this button');
 
       // Emulate a tap on the floating action button.
       await tester.tap(fab);
@@ -54,7 +57,9 @@ void main() {
        */
     });
 
-    testWidgets('Push "http get" button, verify 100 json objects download from "https://jsonplaceholder.typicode.com/posts"', (tester) async {
+    testWidgets(
+        'Push "http get" button, verify 100 json objects download from "https://jsonplaceholder.typicode.com/posts"',
+        (tester) async {
       app.main();
       await tester.pumpAndSettle();
 

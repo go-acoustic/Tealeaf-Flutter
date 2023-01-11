@@ -127,6 +127,7 @@ class _MyAppState extends State<MyApp> {
               child: Column(children: [
                 const Padding(padding: EdgeInsets.only(top: 10.0)),
                 const Image(
+                  key: Key("owlImage"),
                   height: 70,
                   image: NetworkImage(
                       'https://flutter.github.io/assets-for-api-docs/assets/widgets/owl.jpg'),
@@ -157,6 +158,7 @@ class _MyAppState extends State<MyApp> {
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Text("Swipe"),
                   Radio(
+                    key: Key("swipeRadio"),
                     value: false,
                     groupValue: _pinch,
                     onChanged: (value) {
@@ -167,10 +169,13 @@ class _MyAppState extends State<MyApp> {
                   const Padding(padding: EdgeInsets.only(right: 15.0)),
                   const Text("Pinch"),
                   Radio(
+                    key: Key("PinchRadio"),
                     value: true,
                     groupValue: _pinch,
                     onChanged: (value) {
                       setState(() => _pinch = value as bool);
+                      print("pinch radio value $value");
+                      print("pinch radio _pinch $_pinch");
                     },
                     activeColor: Colors.green,
                   )
@@ -189,7 +194,10 @@ class _MyAppState extends State<MyApp> {
                 const Padding(padding: EdgeInsets.only(bottom: 20.0)),
                 if (_showExceptionMsg)
                   GestureDetector(
-                      child: const Text("Tap on me to cause an exception!",
+                      key: Key("exceptionGesture"),
+                      child: const Text(
+                          key: Key("exceptionText"),
+                          "Tap on me to cause an exception!",
                           semanticsLabel: 'Expires in 15 seconds'),
                       onTap: () {
                         debugPrint("User wanted an exception thrown");
@@ -201,6 +209,7 @@ class _MyAppState extends State<MyApp> {
                   children: <Widget>[
                     Text('Http list size: ${httpList.length}'),
                     ElevatedButton(
+                      key: Key("httpGet"),
                       onPressed: () async {
                         List<dynamic> list = await connectionExample(
                             "https://jsonplaceholder.typicode.com/posts");
@@ -217,6 +226,7 @@ class _MyAppState extends State<MyApp> {
                     hint: "my hint",
                     label: "my label",
                     child: GestureDetector(
+                        key: Key("GestureButton"),
                         child: Stack(
                             alignment: AlignmentDirectional.center,
                             children: [
@@ -243,6 +253,7 @@ class _MyAppState extends State<MyApp> {
               ]),
             ))),
         floatingActionButton: FloatingActionButton(
+          key: Key("floatingButton"),
           onPressed: () async {
             debugPrint("FAB onPressed!");
             setState(() {

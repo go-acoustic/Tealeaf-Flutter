@@ -1,3 +1,6 @@
+## 1.0.9+3
+- Reworked script for automation install
+
 ## 1.0.9+2
 - Added App Key input to automation install
 

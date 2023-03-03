@@ -1,14 +1,12 @@
 #!/bin/bash
 
+PLUGIN_DIR=$1
 whichFlutter=$(which flutter)
 flutterDir=${whichFlutter%???????????}
 
-cd $flutterDir.pub-cache/hosted/pub.dartlang.org/
+cd $PLUGIN_DIR
 pwd=$(pwd)
 
-tlPlugin=$(find $pwd -name *"tl_flutter_plugin-"*)
-cd $tlPlugin
-pwd=$(pwd)
 
 if [ ! -d "$pwd/tealeaf_aop" ]
 then

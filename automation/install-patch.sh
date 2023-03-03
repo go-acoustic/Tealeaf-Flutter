@@ -1,10 +1,13 @@
 #!/usr/local/bin/bash
 
+PLUGIN_DIR=$1
+FLUTTER_DIR=$2
+
 # Check if flutter has been properly installed
 if ! command -v flutter &> /dev/null
 then
     echo "The flutter tool was not found. See https://docs.flutter.dev/get-started/install/macos#update-your-path for help"
-    exit
+    exit 1
 fi
 
 # Get flutter version and retrieve flutter & dart version number  
@@ -45,44 +48,44 @@ if [ $channelIndex -gt -1 ]; then
     channelVer=${flutterVerArray[channelIndex]}
 fi
 
-# Check if Flutter version is supported
+# Check if Flutter channel is supported
 if [ $channelVer != "stable" ]; then
     echo "Flutter version is not supported. Flutter channel must be stable"
-    exit
+    exit 1
 fi
 
-if [[ ${flutterVer:0:1} -gt 2 && ${flutterVer:2:1} -lt 3 ]]
+# Check if Flutter version is supported
+if [[ ${flutterVer:0:1} -gt 2 && ${flutterVer:2:1} -lt 3  && ${flutterVer:4:2} -gt 10 ]]
 then
-    echo "Flutter version is not supported. Flutter version must be greater than or equal to 3.3.0"
-    exit
+    echo "Flutter version is not supported. Flutter version must be between 3.3.0 - 3.3.10"
+    exit 1
 fi
 
-cd ../flutter_patches
+cd $PLUGIN_DIR/flutter_patches
 flutterPatchesDir=$(pwd)
 
-# Get Flutter directory
-flutterDir=$(which flutter)
-flutterDirLen=${#flutterDir}
-removeFlutterDirLen=11
-flutterIndex=$(expr $flutterDirLen - $removeFlutterDirLen)
-flutterDir=${flutterDir:0:flutterIndex}
+# Set the Flutter patch file
+patchFile="tl_flutter_patch_${flutterVer}.zip"
 
-# #Set the Flutter patch file
-patchFile="tl_flutter_patch_3.3.x.zip"
 
-# Copy Flutter patch to Flutter directory and unzip it
-cp $flutterPatchesDir/$patchFile $flutterDir
-cd $flutterDir
-unzip -o $patchFile
-rm $patchFile
-
-# Check if cache directory exist and if it does delete it 
-if [ -d $flutterDir/bin/cache ] 
-then
-    rm -rf $flutterDir/bin/cache
+if [ ! -f "$flutterPatchesDir/$patchFile" ]; then
+    echo "$flutterPatchesDir/$patchFile  does not exists."
+    exit 1
 fi
 
-# rebuild flutter
+# Copy Flutter patch to Flutter directory and unzip it
+cp $flutterPatchesDir/$patchFile $FLUTTER_DIR
+cd $FLUTTER_DIR
+unzip -o $FLUTTER_DIR/$patchFile
+rm $FLUTTER_DIR/$patchFile
+
+# Check if cache directory exist and if it does delete it 
+if [ -d $FLUTTER_DIR/bin/cache ] 
+then
+    rm -rf $FLUTTER_DIR/bin/cache
+fi
+
+# Rebuild flutter
 flutter --version
 
-
+exit 0

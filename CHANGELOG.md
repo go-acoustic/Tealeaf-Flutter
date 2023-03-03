@@ -1,3 +1,6 @@
+## 1.1.0
+- Added support for pub global
+
 ## 1.0.9+3
 - Reworked script for automation install
 

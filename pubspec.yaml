@@ -17,23 +17,21 @@ build-number: 1.0.7
 
 environment:
   sdk: ">=2.18.0 <3.0.0"
+  flutter: ">=2.5.0"
 
 dependencies:
+  flutter:
+    sdk: flutter
 
   crypto: ^3.0.1
   http: ^0.13.4
   logger: ^1.1.0
   yaml: ^3.1.1
-  args: ^2.4.0
-  process_run: ^0.12.5+2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^2.0.0
-
-executables:
-  tlplugin:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

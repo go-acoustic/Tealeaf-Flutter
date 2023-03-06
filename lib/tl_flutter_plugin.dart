@@ -1,6 +1,5 @@
 import 'dart:async';
 
-// ignore: depend_on_referenced_packages
 import 'package:flutter/services.dart';
 import 'package:yaml/yaml.dart';
 

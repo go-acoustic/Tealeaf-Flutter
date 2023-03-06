@@ -4,11 +4,8 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:crypto/crypto.dart';
 
-// ignore: depend_on_referenced_packages
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
 import 'package:flutter/gestures.dart';
-// ignore: depend_on_referenced_packages
 import 'package:flutter/services.dart';
 
 import 'package:tl_flutter_plugin/aspectd_defs.dart';

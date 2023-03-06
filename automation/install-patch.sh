@@ -1,7 +1,9 @@
 #!/usr/local/bin/bash
 
 PLUGIN_DIR=$1
-FLUTTER_DIR=$2
+
+whichFlutter=$(which flutter)
+FLUTTER_DIR=${whichFlutter%???????????}
 
 # Check if flutter has been properly installed
 if ! command -v flutter &> /dev/null
@@ -74,7 +76,7 @@ if [ ! -f "$flutterPatchesDir/$patchFile" ]; then
 fi
 
 # Copy Flutter patch to Flutter directory and unzip it
-cp $flutterPatchesDir/$patchFile $FLUTTER_DIR
+cp "$flutterPatchesDir/$patchFile" $FLUTTER_DIR
 cd $FLUTTER_DIR
 unzip -o $FLUTTER_DIR/$patchFile
 rm $FLUTTER_DIR/$patchFile

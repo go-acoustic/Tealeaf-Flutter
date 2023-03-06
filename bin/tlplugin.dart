@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:process_run/shell.dart';
-import 'package:tlplugin/models/basic_config_model.dart';
-import 'package:tlplugin/tlplugin.dart';
+import 'package:tl_flutter_plugin/models/basic_config_model.dart';
+import 'package:tl_flutter_plugin/tlplugin.dart';
 
 /// To run tlplugin dart commands
 void main(List<String> arguments) async {
@@ -41,11 +41,16 @@ void main(List<String> arguments) async {
   final generateConfig = argResults['generateConfig'] as bool;
   final updateConfig = argResults['updateConfig'] as bool;
 
-  List splitPath = Platform.script.path.split("packages");
+  List splitPath = Platform.script.path.split(".dart_tool");
   String pluginRoot = splitPath[0];
   String currentProjectDir = Directory.current.path;
 
-  bool debug = false;
+  stdout.writeln("Platform.script.path ${Platform.script.path}");
+  stdout.writeln("splitPath $splitPath");
+  stdout.writeln("pluginRoot $pluginRoot");
+  stdout.writeln("currentProjectDir $currentProjectDir");
+
+  bool debug = true;
 
   if (arguments.isEmpty) {
     stdout.writeln('Plugin requires an argument');

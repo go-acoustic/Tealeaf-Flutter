@@ -18,11 +18,14 @@ Future<String> getVersion(String currentProjectDir, String pluginName) async {
   return pubspecLoader['dependencies'][pluginName].replaceAll('^', '');
 }
 
-generateJsonConfig(
-    String pluginRoot, String currentProjectDir, bool debug) async {
+generateJsonConfig(String pluginRoot, String currentProjectDir, bool debug,
+    bool fullInstall) async {
   await Shell(verbose: debug).run(
       "bash ${pluginRoot}automation/generateConfig.sh $pluginRoot $currentProjectDir");
-  stdout.writeln('Added TealeafConfig.json to current project');
+
+  if (!fullInstall) {
+    stdout.writeln('Added TealeafConfig.json to current project');
+  }
 }
 
 updateConfigShell(String pluginRoot, String currentProjectDir, String key,
@@ -32,7 +35,8 @@ updateConfigShell(String pluginRoot, String currentProjectDir, String key,
       "bash ${pluginRoot}automation/updateConfig.sh  $currentProjectDir $key $value $valueType");
 }
 
-updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
+updateTealeafLayoutConfig(
+    BasicConfig basicConfig, String currentProjectDir, bool fullInstall) {
   if (basicConfig.tealeaf?.layoutConfig != null) {
     JsonEncoder encoder = JsonEncoder.withIndent('  ');
     String prettyprint = encoder.convert(basicConfig.tealeaf!.layoutConfig);
@@ -57,14 +61,18 @@ updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
         .create(recursive: true)
         .then((File file) {
       file.writeAsString(prettyprint);
-      stdout.writeln('Updating Android TealeafLayoutConfig.json');
+      if (!fullInstall) {
+        stdout.writeln('Updating Android TealeafLayoutConfig.json');
+      }
     });
 
     File('$currentProjectDir/ios/Pods/TealeafDebug/SDKs/iOS/Debug/TLFResources.bundle/TealeafLayoutConfig.json')
         .create(recursive: true)
         .then((File file) {
       file.writeAsString(prettyprint);
-      stdout.writeln('Updating iOS TealeafLayoutConfig.json');
+      if (!fullInstall) {
+        stdout.writeln('Updating iOS TealeafLayoutConfig.json');
+      }
     });
   } else {
     stdout.writeln(

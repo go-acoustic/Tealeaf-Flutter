@@ -1,3 +1,6 @@
+## 1.1.0+4
+- Added update to Json on full install
+
 ## 1.1.0+3
 - Removed duplicate print in dart plugin
 

@@ -46,6 +46,7 @@ void main(List<String> arguments) async {
   String version = await getVersion(currentProjectDir, pluginName);
   String pluginDirName = "$pluginName-$version";
   String pluginRoot = await getSDKPath(pluginDirName);
+  String installComplete = 'Installation complete. Please restart your IDE';
 
   bool debug = false;
 
@@ -63,25 +64,20 @@ void main(List<String> arguments) async {
         .run("bash ${pluginRoot}automation/install-patch.sh $pluginRoot");
 
     if (install) {
-      stdout.writeln('\nPlease restart your IDE\n');
+      stdout.writeln(installComplete);
     }
   }
 
   if (addToProject || fullInstall) {
     await Shell(verbose: debug).run(
         "bash ${pluginRoot}automation/setupMobilePlatforms.sh $pluginRoot $currentProjectDir");
-
-    if (fullInstall) {
-      generateJsonConfig(pluginRoot, currentProjectDir, debug);
-      stdout.writeln('\nPlease restart your IDE\n');
-    }
   }
 
-  if (generateConfig) {
-    generateJsonConfig(pluginRoot, currentProjectDir, debug);
+  if (generateConfig || fullInstall) {
+    await generateJsonConfig(pluginRoot, currentProjectDir, debug, fullInstall);
   }
 
-  if (updateConfig) {
+  if (updateConfig || fullInstall) {
     File file = File("$currentProjectDir/TealeafConfig.json");
 
     if (file.existsSync()) {
@@ -91,16 +87,22 @@ void main(List<String> arguments) async {
       Map<String, dynamic> configMap = jsonDecode(input);
       BasicConfig basicConfig = BasicConfig.fromJson(configMap);
 
-      updateTealeafLayoutConfig(basicConfig, currentProjectDir);
+      await updateTealeafLayoutConfig(
+          basicConfig, currentProjectDir, fullInstall);
 
       basicConfig.tealeaf!.toJson().forEach((key, value) async {
         if (key != "layoutConfig") {
-          updateConfigShell(pluginRoot, currentProjectDir, key, value, debug);
+          await updateConfigShell(
+              pluginRoot, currentProjectDir, key, value, debug);
         }
       });
     } else {
       stdout.writeln(
           'Unable to locate TealeafConfig.json in project\'s root directory\nPlease run "tlplugin -g" to generate new TealeafConfig.json');
     }
+  }
+
+  if (fullInstall) {
+    stdout.writeln(installComplete);
   }
 }

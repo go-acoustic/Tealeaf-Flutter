@@ -1,3 +1,6 @@
+## 1.1.0+3
+- Removed duplicate print in dart plugin
+
 ## 1.1.0+2
 - Update to dart plugin
 

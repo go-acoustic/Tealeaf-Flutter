@@ -15,7 +15,6 @@ Future<String> getSDKPath(String pluginDirName) async {
 Future<String> getVersion(String currentProjectDir, String pluginName) async {
   var pubFile = await File("$currentProjectDir/pubspec.yaml").readAsString();
   final pubspecLoader = loadYaml(pubFile) as YamlMap;
-  stdout.writeln('Plugin requires an argument');
   return pubspecLoader['dependencies'][pluginName].replaceAll('^', '');
 }
 

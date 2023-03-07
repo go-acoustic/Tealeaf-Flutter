@@ -1,3 +1,6 @@
+## 1.1.0+2
+- Update to dart plugin
+
 ## 1.1.0+1
 - Correction to pub global path
 

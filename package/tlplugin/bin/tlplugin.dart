@@ -45,20 +45,9 @@ void main(List<String> arguments) async {
   String pluginName = "tl_flutter_plugin";
   String version = await getVersion(currentProjectDir, pluginName);
   String pluginDirName = "$pluginName-$version";
-
-// Get Flutter SDK dir
-  var result = await Process.run('which', ['flutter']);
-  String resultString = result.stdout;
-  List splitPathNew = resultString.split("bin");
-  String pluginRoot =
-      "${splitPathNew[0]}.pub-cache/hosted/pub.dartlang.org/$pluginDirName/";
+  String pluginRoot = await getSDKPath(pluginDirName);
 
   bool debug = false;
-
-  if (arguments.isEmpty) {
-    stdout.writeln('Plugin requires an argument');
-    stdout.writeln('Please run "tlplugin -h" to view list of options');
-  }
 
   if (help) {
     stdout.writeln('Global options:');

@@ -5,6 +5,13 @@ import 'package:yaml/yaml.dart';
 
 import 'models/basic_config_model.dart';
 
+Future<String> getSDKPath(String pluginDirName) async {
+  var result = await Process.run('which', ['flutter']);
+  String resultString = result.stdout;
+  List splitPathNew = resultString.split("bin");
+  return "${splitPathNew[0]}.pub-cache/hosted/pub.dartlang.org/$pluginDirName/";
+}
+
 Future<String> getVersion(String currentProjectDir, String pluginName) async {
   var pubFile = await File("$currentProjectDir/pubspec.yaml").readAsString();
   final pubspecLoader = loadYaml(pubFile) as YamlMap;

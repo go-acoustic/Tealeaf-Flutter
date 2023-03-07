@@ -1,6 +1,6 @@
 name: tl_flutter_plugin
 description: Acoustic Tealeaf can monitor traffic between your application and server. It captures device context and user activity to monitor and evaluate the performance of your applications
-version: 1.1.0+4
+version: 1.1.1
 homepage: "https://github.com/acoustic-analytics/acoustic_tealeaf"
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43

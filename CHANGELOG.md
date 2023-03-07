@@ -1,4 +1,4 @@
-## 1.1.0+4
+## 1.1.1
 - Added update to Json on full install
 
 ## 1.1.0+3

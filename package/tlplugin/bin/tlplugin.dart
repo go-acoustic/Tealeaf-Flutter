@@ -41,16 +41,19 @@ void main(List<String> arguments) async {
   final generateConfig = argResults['generateConfig'] as bool;
   final updateConfig = argResults['updateConfig'] as bool;
 
-  List splitPath = Platform.script.path.split(".dart_tool");
-  String pluginRoot = splitPath[0];
   String currentProjectDir = Directory.current.path;
+  String pluginName = "tl_flutter_plugin";
+  String version = await getVersion(currentProjectDir, pluginName);
+  String pluginDirName = "$pluginName-$version";
 
-  stdout.writeln("Platform.script.path ${Platform.script.path}");
-  stdout.writeln("splitPath $splitPath");
-  stdout.writeln("pluginRoot $pluginRoot");
-  stdout.writeln("currentProjectDir $currentProjectDir");
+// Get Flutter SDK dir
+  var result = await Process.run('which', ['flutter']);
+  String resultString = result.stdout;
+  List splitPathNew = resultString.split("bin");
+  String pluginRoot =
+      "${splitPathNew[0]}.pub-cache/hosted/pub.dartlang.org/$pluginDirName/";
 
-  bool debug = true;
+  bool debug = false;
 
   if (arguments.isEmpty) {
     stdout.writeln('Plugin requires an argument');

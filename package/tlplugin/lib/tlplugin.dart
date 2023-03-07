@@ -1,8 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:process_run/shell.dart';
+import 'package:yaml/yaml.dart';
 
 import 'models/basic_config_model.dart';
+
+Future<String> getVersion(String currentProjectDir, String pluginName) async {
+  var pubFile = await File("$currentProjectDir/pubspec.yaml").readAsString();
+  final pubspecLoader = loadYaml(pubFile) as YamlMap;
+  stdout.writeln('Plugin requires an argument');
+  return pubspecLoader['dependencies'][pluginName].replaceAll('^', '');
+}
 
 generateJsonConfig(
     String pluginRoot, String currentProjectDir, bool debug) async {

@@ -8,17 +8,20 @@ import 'package:tl_flutter_plugin/swipeorpinch.dart';
 import 'package:tl_flutter_plugin/tl_flutter_plugin.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MaterialApp(
+    title: 'Navigation Basics',
+    home: FirstRoute(),
+  ));
 }
 
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+class FirstRoute extends StatefulWidget {
+  const FirstRoute({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<FirstRoute> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<FirstRoute> {
   static const String undefined = 'undefined';
 
   String _platformVersion = undefined;
@@ -26,7 +29,7 @@ class _MyAppState extends State<MyApp> {
   String _tealeafVersion = undefined;
   String _tealeafSessionId = undefined;
   String _appKey = undefined;
-  bool _aspectdEnabled = false;
+  // bool _aspectdEnabled = false;
   bool _pinch = false;
   bool _showExceptionMsg = true;
   static int count = 0;
@@ -90,7 +93,7 @@ class _MyAppState extends State<MyApp> {
       appKey = 'Failed to get app key';
     }
 
-    _aspectdEnabled = PluginTealeaf.aspectdTest();
+    // _aspectdEnabled = PluginTealeaf.aspectdTest();
 
     // If the widget was removed from the tree while the asynchronous platform
     // message was in flight, we want to discard the reply rather than calling
@@ -184,7 +187,7 @@ class _MyAppState extends State<MyApp> {
                 Text('Running on: $_platformVersion'),
                 Text('Tealeaf library version: $_tealeafVersion'),
                 Text('Tealeaf plugin version: $_pluginVersion'),
-                Text('AspectD enabled: $_aspectdEnabled'),
+                // Text('AspectD enabled: $_aspectdEnabled'),
                 const Padding(padding: EdgeInsets.only(top: 10.0)),
                 Text('AppKey: $_appKey'),
                 const Text('Tealeaf SaaS Session ID: '),
@@ -207,6 +210,16 @@ class _MyAppState extends State<MyApp> {
                 const Padding(padding: EdgeInsets.only(bottom: 20.0)),
                 Column(
                   children: <Widget>[
+                    ElevatedButton(
+                      child: const Text('Open route'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SecondRoute()),
+                        );
+                      },
+                    ),
                     Text('Http list size: ${httpList.length}'),
                     ElevatedButton(
                       key: Key("httpGet"),
@@ -296,5 +309,26 @@ class _MyAppState extends State<MyApp> {
       return jsonDecode(res.body);
     }
     throw "Unable to retrieve posts.";
+  }
+}
+
+class SecondRoute extends StatelessWidget {
+  const SecondRoute({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Second Route'),
+      ),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Go back!'),
+        ),
+      ),
+    );
   }
 }

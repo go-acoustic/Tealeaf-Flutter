@@ -29,8 +29,8 @@ dependencies:
     # The example app is bundled with the plugin so we use a path dependency on
     # the parent directory to specify the current plugin's version. Applications
     # should use either the pub.dev repo or the Acoustic GitHub repo as shown above.
-    git: https://github.com/acoustic-analytics/acoustic_tealeaf.git
-    # path: ../
+    # git: https://github.com/acoustic-analytics/acoustic_tealeaf.git
+    path: ../
 
   http: ^0.13.4
 

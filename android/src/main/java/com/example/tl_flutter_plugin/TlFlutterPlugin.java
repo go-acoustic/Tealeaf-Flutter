@@ -7,6 +7,7 @@ import android.graphics.Rect;
 import android.os.Build;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
+import android.os.Bundle;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.view.MotionEvent;
@@ -15,6 +16,7 @@ import android.view.ViewGroup;
 import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -52,7 +54,7 @@ import com.tl.uic.model.Style;
 import com.tl.uic.model.Touch;
 import com.tl.uic.model.TouchPosition;
 import com.tl.uic.model.kotlin.Accessibility;
-import com.tl.uic.util.CommonUtil;
+//import com.tl.uic.util.CommonUtil;
 import com.tl.uic.util.EnhancedImageUtil;
 import com.tl.uic.util.LayoutUtil;
 import com.tl.uic.util.ValueUtil;
@@ -431,9 +433,9 @@ class ScreenUtil {
 
   static void logLayout(Activity activity, String currentName, Layout layout, byte[] imageBytes) {
     if (activity != null && activity.getWindow() != null) {
-      Activity wholeActivity = CommonUtil.getRootActivity(activity);
+//      Activity wholeActivity = CommonUtil.getRootActivity(activity);
       String className = activity.getLocalClassName();
-      final View view = wholeActivity.getWindow().getDecorView();
+      final View view = activity.getWindow().getDecorView();
 
       final String currentLayoutName = currentName + "-layout"; // TBD -- Always non-empty name
 
@@ -725,18 +727,24 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     // TeaCuts (AspectJ) needs to have override methods to add hooks to it.
 
     // This is a 'blocked' issue according to flutter developers
-    renderer = flutterPluginBinding.getFlutterEngine().getRenderer();
+//    renderer = flutterPluginBinding.getFlutterEngine().getRenderer();
 
     // Enable Tealeaf library
     Application app = (Application) flutterPluginBinding.getApplicationContext();
 
     new Tealeaf(app);
     Tealeaf.enable();
+
+    EOCore.updateConfig(Tealeaf.TLF_Enable_Fragment_Life_Cycle_Listener, "false", TealeafEOLifecycleObject.getInstance());
+
   }
 
   // ActivityAware  overrides
   @Override
   public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+    // Add activity lifecycle listeners here
+    binding.getActivity().getApplication().registerActivityLifecycleCallbacks(new MyActivityLifecycleCallbacks());
+
     activityBinding = binding;
   }
 
@@ -753,6 +761,117 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
   @Override
   public void onDetachedFromActivityForConfigChanges() {
     activityBinding = null;
+  }
+
+  private class MyActivityLifecycleCallbacks implements Application.ActivityLifecycleCallbacks {
+    @Override
+    public void onActivityPreCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPreCreated(activity, savedInstanceState);
+    }
+
+    @Override
+    public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
+
+    }
+
+    @Override
+    public void onActivityPostCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPostCreated(activity, savedInstanceState);
+    }
+
+    @Override
+    public void onActivityPreStarted(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPreStarted(activity);
+    }
+
+    @Override
+    public void onActivityStarted(Activity activity) {
+      // Handle onActivityStarted event here
+    }
+
+    @Override
+    public void onActivityPostStarted(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPostStarted(activity);
+    }
+
+    @Override
+    public void onActivityPreResumed(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPreResumed(activity);
+    }
+
+    @Override
+    public void onActivityResumed(Activity activity) {
+      // Handle onActivityResumed event here
+      Tealeaf.onResume(activity, null);
+
+    }
+
+    @Override
+    public void onActivityPostResumed(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPostResumed(activity);
+    }
+
+    @Override
+    public void onActivityPrePaused(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPrePaused(activity);
+    }
+
+    @Override
+    public void onActivityPaused(Activity activity) {
+      // Handle onActivityPaused event here
+
+      Tealeaf.onPause(activity, null);
+    }
+
+    @Override
+    public void onActivityPostPaused(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPostPaused(activity);
+    }
+
+    @Override
+    public void onActivityPreStopped(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPreStopped(activity);
+    }
+
+    @Override
+    public void onActivityStopped(Activity activity) {
+      // Handle onActivityStopped event here
+    }
+
+    @Override
+    public void onActivityPostStopped(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPostStopped(activity);
+    }
+
+    @Override
+    public void onActivityPreSaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPreSaveInstanceState(activity, outState);
+    }
+
+    @Override
+    public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+      // Handle onActivitySaveInstanceState event here
+    }
+
+    @Override
+    public void onActivityPostSaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPostSaveInstanceState(activity, outState);
+    }
+
+    @Override
+    public void onActivityPreDestroyed(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPreDestroyed(activity);
+    }
+
+    @Override
+    public void onActivityDestroyed(Activity activity) {
+      // Handle onActivityDestroyed event here
+    }
+
+    @Override
+    public void onActivityPostDestroyed(@NonNull Activity activity) {
+      Application.ActivityLifecycleCallbacks.super.onActivityPostDestroyed(activity);
+    }
   }
 
   public Activity getActivity() {
@@ -800,6 +919,9 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
           break;
         }
         case "gettealeafsessionid": {
+                LOGGER.log(Level.INFO, "onMethodCall from local path: " + request + ", msg: ");
+
+
           final String sessionId = Tealeaf.getCurrentSessionId();
           result.success(sessionId);
           break;
@@ -918,7 +1040,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
     if (logLevel == null) logLevel = EOCore.getDefaultLogLevel();
 
-    Tealeaf.logConnection(url, initTime, loadTime, responseSize, statusCode, logLevel);
+//    Tealeaf.logConnection(url, initTime, loadTime, responseSize, statusCode, logLevel);
   }
 
   void tlCustomEventMessage(Object args) throws Exception {

@@ -1,3 +1,6 @@
+## 2.0.0
+- Removed AspectD, support latest Flutter SDK
+
 ## 1.1.1
 - Added update to Json on full install
 

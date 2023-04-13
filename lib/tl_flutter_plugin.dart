@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:yaml/yaml.dart';
+// import 'package:yaml/yaml.dart';
 
 // ignore: unused_import
 import 'tealeaf_aop.dart';
@@ -76,16 +76,11 @@ class PluginTealeaf {
 
   static Future<String> get pluginVersion async {
     try {
-      const String versionKey = 'version';
-      final String pubspecData = await rootBundle
-          .loadString('packages/tl_flutter_plugin/assets/pubspec.yaml');
-      if (pubspecData.isNotEmpty) {
-        YamlMap pubspecYaml = loadYaml(pubspecData);
-        if (pubspecYaml.containsKey(versionKey)) {
-          return pubspecYaml[versionKey].split('+')[0];
-        }
-      }
-      return "";
+
+      // TODO:
+      // final String pubspecData = ("See tl_flutter_plugin version in pubspec.yaml.");
+      
+      return "2.0.0";
     } on Exception catch (e) {
       throw TealeafException.create(
           code: 7, msg: 'Unable to obtain platform version: ${e.toString()}');

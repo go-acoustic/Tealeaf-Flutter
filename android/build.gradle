@@ -2,16 +2,15 @@ group 'com.example.tl_flutter_plugin'
 version '1.0'
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.8.10'
 
     repositories {
-        jcenter()
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath 'com.android.tools.build:gradle:7.4.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -20,15 +19,11 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url "https://raw.githubusercontent.com/acoustic-analytics/Android_Maven/master"
-        }
     }
 }
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion 31
@@ -44,12 +39,10 @@ android {
 }
 
 dependencies {
-    //implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.10'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'com.google.android.material:material:1.2.1'
-
-    implementation 'com.ea:eocore:2.0.288'
-    implementation 'com.ea:tealeaf:10.3.274'
+//    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    
+    implementation "io.github.acoustic-analytics:eocore:+"
+    api "io.github.acoustic-analytics:tealeaf:+"
+//    api files('libs/tealeafmod.jar')
 }

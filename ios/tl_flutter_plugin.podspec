@@ -18,7 +18,7 @@ A new flutter plugin project.
   s.swift_version = '4.0'
   s.dependency 'Flutter'
   s.dependency 'TealeafDebug'
-  s.dependency 'Realm'
+  # s.dependency 'Realm'
   s.platform = :ios, '12.0'
 
 #  s.subspec 'Acoustic' do |ac|

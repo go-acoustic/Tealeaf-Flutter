@@ -1,0 +1,16 @@
+include: package:lints/recommended.yaml
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options
+analyzer:
+  exclude:
+    - pkg/**
+    - flutter.dart
+    - flutter_frontend_server/server-2.16.2.dart
+    - transformer/plugins/aop/transformer/aop_transform_utils-2.x-3.0.2.dart
+    - transformer/plugins/aop/transformer/aop_transform_utils-3.0.3.dart
+    - flutter_frontend_server/server-3.0.x.dart
+
+linter:
+  rules:
+    - avoid_as: false

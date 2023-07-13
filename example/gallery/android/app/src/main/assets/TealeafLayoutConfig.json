@@ -1,0 +1,43 @@
+{
+  "AutoLayout": {
+    "GlobalScreenSettings": {
+      "ScreenChange": true,
+      "DisplayName": "Example",
+      "CaptureLayoutDelay": 500,
+      "ScreenShot": true,
+      "NumberOfWebViews": 0,
+      "CaptureUserEvents": true,
+      "CaptureScreenVisits": false,
+      "CaptureLayoutOn": 2,
+      "CaptureScreenshotOn": 2,
+      "Masking": {
+        "HasMasking": true,
+        "HasCustomMask": true,
+        "Sensitive": {
+          "capitalCaseAlphabet": "X",
+          "number": "9",
+          "smallCaseAlphabet": "x",
+          "symbol": "#"
+        },
+        "MaskIdList": [
+          "c108736d43875b0e6231c09535149ffffe9732de",
+          "textView1",
+          "login.password",
+          "editText"
+        ],
+        "MaskValueList": []
+      }
+    }
+  },
+  "AppendMapIds": {
+    "[w,9290],[v,0]": {
+      "mid": "ASimpleUIView"
+    },
+    "tag2999999": {
+      "mid": "giveAdditionalId1"
+    },
+    "idxPathValue": {
+      "mid": "giveAdditionalId2"
+    }
+  }
+}

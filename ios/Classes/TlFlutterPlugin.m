@@ -39,8 +39,16 @@
     
     [self resetScreenLoadTime];
     
+    // [[TLFApplicationHelper sharedInstance] enableTealeafFramework];
+    setenv("EODebug", "1", 1);
+    setenv("TLF_DEBUG", "1", 1);
+
+    TLFApplicationHelper *tlfApplicationHelperObj = [[TLFApplicationHelper alloc] init];
+        [tlfApplicationHelperObj enableTealeafFramework];
+
     NSLog(@"Tealeaf Enabled: %@", [[TLFApplicationHelper sharedInstance] isTLFEnabled] ? @"Yes" : @"No");
     NSLog(@"Device Pixel Density (scale): %f", _scale);
+    
     
     NSString *mainPath   = [[NSBundle mainBundle] pathForResource:@"TLFResources" ofType:@"bundle"];
     NSBundle *bundlePath = [[NSBundle alloc] initWithPath:mainPath];
@@ -376,6 +384,57 @@
 
     return newControls;
 }
+
+/**
+ * @discussion Logs the layout of the screen with a specified name and delay.
+ *
+ * @remarks This method logs the layout of the screen by capturing the current view controller and sending it to the Tealeaf framework for recording. If the delay is greater than 0, it waits for the specified duration before logging the view.
+ * This method should be called from the main thread.
+ */
+- (void) logScreenLayout: (NSDictionary *) args {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *uv = [UIApplication sharedApplication].keyWindow.rootViewController;
+        while (uv.presentedViewController) {
+            uv = uv.presentedViewController;
+        }
+
+        NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
+        NSString *name = (NSString *) [self checkForParameter:args withKey:@"name"];
+        NSNumber *delay = 0;
+        
+        if (args.count == 3) {
+            delay = (NSNumber *) [self checkForParameter:args withKey:@"delay"];
+        }
+        
+        [[TLFCustomEvent sharedInstance] logScreenViewPageName:name];
+
+        if (delay.floatValue <= 0) {
+            [[TLFCustomEvent sharedInstance] logScreenLayoutWithViewController:uv andName:name];
+        } else {
+            [[TLFCustomEvent sharedInstance] logScreenLayoutWithViewController:uv andDelay:0.5 andName:name];
+        }
+        NSLog(@"TlFlutterPlugin - logScreenLayout: %@", name);
+    });
+}
+
+/**
+ * Logs an event for when a screen view context is unloaded.
+ *
+ * @param args A dictionary containing the parameters for the logging event.
+ * The keys should include 'name' and 'referrer'.
+ * 'name' is the logical name of the current page.
+ * 'referrer' is the source that led the user to this page.
+ */
+- (void) logScreenViewContextUnload: (NSDictionary *) args {
+        // Checking for 'name' parameter in the args, which is supposed to be the logical name of the current page
+        NSString *logicalPageName =  (NSString *) [self checkForParameter:args withKey:@"name"];
+        // Checking for 'referrer' parameter in the args, which is supposed to be the source that led the user to this page
+        NSString *referrer =  (NSString *) [self checkForParameter:args withKey:@"referrer"];
+
+        NSString *cllasss = logicalPageName == nil ? @"Flutter" : [NSString stringWithFormat:@"Flutter_%@", logicalPageName];
+        [[TLFCustomEvent sharedInstance] logScreenViewContext:logicalPageName withClass:cllasss applicationContext:TLFScreenViewTypeUnload referrer:referrer];
+}
+
 
 - (void) tlScreenviewAndLayout:(NSString *) screenViewType addRef:(NSString *) referrer addLayouts:(NSArray *) layouts addTimestamp: (NSString *) timestamp {
     if (referrer == nil) {
@@ -761,6 +820,14 @@
         }
         else if ([@"screenView" caseInsensitiveCompare:call.method] == NSOrderedSame) {
             [self tlScreenview:call.arguments];
+            result(nil);
+        }
+        else if ([@"logScreenLayout" caseInsensitiveCompare:call.method] == NSOrderedSame) {
+            [self logScreenLayout:call.arguments];
+            result(nil);
+        }
+        else if ([@"logScreenViewContextUnload" caseInsensitiveCompare:call.method] == NSOrderedSame) {
+            [self logScreenViewContextUnload:call.arguments];
             result(nil);
         }
         else if ([@"exception" caseInsensitiveCompare:call.method] == NSOrderedSame) {

@@ -1,0 +1,18 @@
+11a12,15
+> abstract class FlutterProgramTransformer {
+>   void transform(Component component);
+> }
+> 
+15a20,22
+>   static List<FlutterProgramTransformer> _flutterProgramTransformers = [];
+> 
+>   static List<FlutterProgramTransformer> get flutterProgramTransformers => _flutterProgramTransformers;
+63a71,78
+> 
+>     if (_flutterProgramTransformers.length > 0) {
+>       int flutterProgramTransformersLen = _flutterProgramTransformers.length;
+>       for (int i=0; i<flutterProgramTransformersLen; i++) {
+>         _flutterProgramTransformers[i].transform(component);
+>       }
+>     }
+> 

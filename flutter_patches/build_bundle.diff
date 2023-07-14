@@ -1,0 +1,22 @@
+diff --git a/packages/flutter_tools/lib/src/commands/build_bundle.dart b/packages/flutter_tools/lib/src/commands/build_bundle.dart
+index 1e1f66b309..e8f2dca0ab 100644
+--- a/packages/flutter_tools/lib/src/commands/build_bundle.dart
++++ b/packages/flutter_tools/lib/src/commands/build_bundle.dart
+@@ -12,6 +12,7 @@ import '../project.dart';
+ import '../reporting/reporting.dart';
+ import '../runner/flutter_command.dart';
+ import 'build.dart';
++import '../aspectd.dart';
+ 
+ class BuildBundleCommand extends BuildSubCommand {
+   BuildBundleCommand({
+@@ -95,6 +96,9 @@ class BuildBundleCommand extends BuildSubCommand {
+ 
+   @override
+   Future<FlutterCommandResult> runCommand() async {
++
++    await AspectdHook.enableAspectd();
++
+     final String targetPlatform = stringArgDeprecated('target-platform')!;
+     final TargetPlatform platform = getTargetPlatformForName(targetPlatform);
+     if (platform == null) {

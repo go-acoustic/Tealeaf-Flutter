@@ -30,4 +30,8 @@ example/ios/Podfile.lock
 .packages
 build/
 inner/pkg
-tealeaf_aop
+tealeaf_aop/flutter_frontend_server/
+test-results/
+test/test-results/
+scripts/test-results/
+scripts/cloneRepo/

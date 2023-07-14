@@ -7,7 +7,7 @@ TYPE=$4
 
 # Update Android 
 androidPath="$projectDir/android/app/src/main/assets/TealeafBasicConfig.properties"
-sed -i '' "s/.*$KEY=.*/$KEY=$VALUE/" $androidPath
+sed -i '' "s,.*$KEY=.*,$KEY=$VALUE," $androidPath
 
 # Update iOS 
 iosPath="$projectDir/ios/Pods/TealeafDebug/SDKs/iOS/Debug/TLFResources.bundle/TealeafBasicConfig.plist"
@@ -49,22 +49,22 @@ done
 
 # String
 if [ $TYPE == "String" ];then
-    sed -i '' "s/.$KEY.*/>$KEY<\/key>\n\t<string>$VALUE<\/string>/" $iosPath
+    sed -i '' "s,.$KEY.*,>$KEY<\/key>\n\t<string>$VALUE<\/string>," $iosPath
 fi
 
 # bool
 if [ $TYPE == "bool" ];then
-    sed -i '' "s/.$KEY.*/>$KEY<\/key>\n\t<$VALUE\/>/" $iosPath
+    sed -i '' "s,.$KEY.*,>$KEY<\/key>\n\t<$VALUE\/>," $iosPath
 fi
 
 # int
 if [ $TYPE == "int" ];then
-    sed -i '' "s/.$KEY.*/>$KEY<\/key>\n\t<integer>$VALUE<\/integer>/" $iosPath
+    sed -i '' "s,.$KEY.*,>$KEY<\/key>\n\t<integer>$VALUE<\/integer>," $iosPath
 fi
 
 # double
 if [ $TYPE == "double" ];then
-    sed -i '' "s/.$KEY.*/>$KEY<\/key>\n\t<real>$VALUE<\/real>/" $iosPath
+    sed -i '' "s,.$KEY.*,>$KEY<\/key>\n\t<real>$VALUE<\/real>," $iosPath
 fi
 
 

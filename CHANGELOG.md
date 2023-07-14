@@ -1,3 +1,32 @@
+## 2.0.5-beta
+Beta TL-Flutter-Plugin Change Notes: 
+Bug Fixes
+
+- None.
+
+
+Improvements:
+
+- None.
+
+
+Our environment for this release:
+
+- Xcode 14.2
+- MacOS 13.2
+- iOS 12.x to 15.x
+- Supported architectures:
+	- simulator
+		- arm64
+		- x86_64
+	- device
+		- arm64
+
+
+Known Issues
+
+- None.
+     
 ## 2.0.4-beta
 Beta TL-Flutter-Plugin Change Notes: 
 Bug Fixes

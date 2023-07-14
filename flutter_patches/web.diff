@@ -1,0 +1,62 @@
+diff --git a/packages/flutter_tools/lib/src/build_system/targets/web.dart b/packages/flutter_tools/lib/src/build_system/targets/web.dart
+index 35b7b4e765..5fdf5da44f 100644
+--- a/packages/flutter_tools/lib/src/build_system/targets/web.dart
++++ b/packages/flutter_tools/lib/src/build_system/targets/web.dart
+@@ -26,6 +26,7 @@ import '../depfile.dart';
+ import '../exceptions.dart';
+ import 'assets.dart';
+ import 'localizations.dart';
++import '../../aop/aop_manager.dart';
+ 
+ /// Whether the application has web plugins.
+ const String kHasWebPlugins = 'HasWebPlugins';
+@@ -201,25 +202,31 @@ class Dart2JSTarget extends Target {
+         '--no-source-maps',
+     ];
+ 
+-    // Run the dart2js compilation in two stages, so that icon tree shaking can
+-    // parse the kernel file for web builds.
+-    final ProcessResult kernelResult = await globals.processManager.run(<String>[
++    final kernelCommands = <String>[
+       ...sharedCommandOptions,
+       '-o',
+       environment.buildDir.childFile('app.dill').path,
+       '--packages=.dart_tool/package_config.json',
+       '--cfe-only',
+       environment.buildDir.childFile('main.dart').path, // dartfile
+-    ]);
++    ];
++   
++    print(kernelCommands);
++ 
++    // Run the dart2js compilation in two stages, so that icon tree shaking can
++    // parse the kernel file for web builds.
++    final ProcessResult kernelResult = await globals.processManager.run(kernelCommands); 
+     if (kernelResult.exitCode != 0) {
+       throw Exception(_collectOutput(kernelResult));
+     }
+ 
++    await AopManager.hookSnapshotCommand(environment.buildDir.childFile('app.dill').path, buildMode);
++
+     final String? dart2jsOptimization = environment.defines[kDart2jsOptimization];
+     final File outputJSFile = environment.buildDir.childFile('main.dart.js');
+     final bool csp = environment.defines[kCspMode] == 'true';
+ 
+-    final ProcessResult javaScriptResult = await environment.processManager.run(<String>[
++    final commands = <String>[
+       ...sharedCommandOptions,
+       if (dart2jsOptimization != null) '-$dart2jsOptimization' else '-O4',
+       if (buildMode == BuildMode.profile) '--no-minify',
+@@ -227,7 +234,11 @@ class Dart2JSTarget extends Target {
+       '-o',
+       outputJSFile.path,
+       environment.buildDir.childFile('app.dill').path, // dartfile
+-    ]);
++    ];
++
++    print(commands);
++
++    final ProcessResult javaScriptResult = await environment.processManager.run(commands);
+     if (javaScriptResult.exitCode != 0) {
+       throw Exception(_collectOutput(javaScriptResult));
+     }

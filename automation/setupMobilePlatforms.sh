@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/bash
 
 flutterDir=$1
 projectDir=$2
@@ -14,7 +14,7 @@ fi
 tlPlugin=$flutterDir
 
 echo -e "\nCopying Android assets"
-cp -r $tlPlugin/example/android/app/src/main/assets "$projectDir/android/app/src/main/" &&  androidSuccess=true  || echo "Failed to copy assets"
+cp -r $tlPlugin/automation/android/ "$projectDir/android/app/src/main/assets/" &&  androidSuccess=true  || echo "Failed to copy assets"
 
 if $androidSuccess
 then
@@ -27,7 +27,7 @@ fi
 androidBuildGradle="$projectDir/android/app/build.gradle"
 sed -i '' "s/flutter.minSdkVersion/21/" $androidBuildGradle 
 
-#Set up iOS
+# Set up iOS
 # Update Podfile
 iosPodfile="$projectDir/ios/Podfile" 
 sed -i '' "s/# platform :ios, '11.0'/platform :ios, '12.0'/" $iosPodfile 
@@ -56,15 +56,17 @@ podSuccess=false
 cd $projectDir/ios/
 rm -rf Podfile.lock
 flutter precache --ios
+pod update
 pod install && podSuccess=true || echo "Issue installing pods"
 
 
 if $podSuccess
 then
-echo -e "\n\niOS enviroment installed successfully"
+echo -e "\niOS enviroment installed successfully"
 fi
 
 if $androidSuccess
 then
 echo -e "Android enviroment installed successfully\n"
 fi
+ 

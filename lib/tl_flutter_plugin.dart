@@ -1,12 +1,249 @@
 import 'dart:async';
-
+import 'package:flutter/foundation.dart';
+// import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// import 'package:yaml/yaml.dart';
 
-// ignore: unused_import
-import 'tealeaf_aop.dart';
 import 'logger.dart';
+import 'dart:convert';
+// import 'dart:isolate';
 
+/// A widget that logs UI change events.
+///
+/// This [Tealeaf] widget listens to pointer events such as onPointerDown, onPointerUp, onPointerMove, and onPointerCancel.
+/// It logs these events by printing them to the console if the app is running in debug mode.
+/// Use this widget to log UI changes and interactions during development and debugging.
+class Tealeaf extends StatelessWidget {
+  /// The child widget to which the [Tealeaf] is applied.
+  final Widget child;
+
+  /// Constructs a [Tealeaf] with the given child.
+  ///
+  /// The [child] parameter is the widget to which the [Tealeaf] is applied.
+  Tealeaf({Key? key, required this.child}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    UserInteractionLogger.initialize(); // Initialize the UserInteractionLogger
+    /// In this example, printWidgetTree is called after the frame has been built, ensuring that the entire widget
+    /// tree for this frame is available. The context is cast to Element to pass it to printWidgetTree.
+
+    // WidgetsBinding.instance
+    //     .addPostFrameCallback((_) => WidgetTreeLogger.log(child));
+
+    // WidgetsBinding.instance!.addPostFrameCallback((_) {
+    //   printWidgetTree(context as Element);
+    // });
+
+    return Listener(
+      onPointerDown: (details) {
+        logEvent('onPointerDown', details);
+      },
+      onPointerUp: (details) {
+        logEvent('onPointerUp', details);
+      },
+      onPointerMove: (details) {
+        logEvent('onPointerMove', details);
+      },
+      onPointerCancel: (details) {
+        logEvent('onPointerCancel', details);
+      },
+      child: child,
+    );
+  }
+
+  void printWidgetTree(Element element, [String indent = '']) {
+    print('$indent${element.widget.runtimeType}');
+    element.visitChildElements((child) {
+      printWidgetTree(child, '$indent  ');
+    });
+  }
+
+  /// Logs the UI change event.
+  ///
+  /// The [eventType] parameter represents the type of the UI change event, such as 'onPointerDown'.
+  /// The [event] parameter contains additional details or data related to the event.
+  void logEvent(String eventType, dynamic event) {
+    if (kDebugMode) {
+      print('$eventType: $event');
+    }
+  }
+
+  // /// Log in different thread
+  // void logTreeInIsolate(Widget widget) {
+  //   final port = ReceivePort();
+  //   Isolate.spawn(logTree, port.sendPort);
+  //   port.listen((message) {
+  //     print(message);
+  //   });
+  // }
+
+  // void logTree(SendPort port) {
+  //   _log(child, 0, port);
+  // }
+
+  // void _log(Widget widget, int depth, SendPort port) {
+  //   final indent = ' ' * depth;
+  //   port.send('$indent${widget.runtimeType}');
+
+  //   if (widget is ParentDataWidget) {
+  //     _log((widget as ParentDataWidget).child, depth + 1, port);
+  //   } else if (widget is MultiChildRenderObjectWidget) {
+  //     (widget as MultiChildRenderObjectWidget).children.forEach((child) {
+  //       _log(child, depth + 1, port);
+  //     });
+  //   } else if (widget is ProxyWidget) {
+  //     _log((widget as ProxyWidget).child, depth + 1, port);
+  //   }
+  // }
+}
+
+// void _logTree() {
+//   // Get root state
+//   final state = WidgetsBinding.instance.renderViewElement;
+
+//   // Log tree on a separate isolate
+//   final receivePort = ReceivePort();
+//   Isolate.spawn(_log, receivePort.sendPort);
+//   receivePort.first.then((sendPort) {
+//     sendPort.send(state);
+//   });
+// }
+
+// void _log(SendPort sendPort) {
+//   final receivePort = ReceivePort();
+//   sendPort.send(receivePort.sendPort);
+//   receivePort.first.then((state) {
+//     _logWidget(state as Element);
+//   });
+// }
+
+// void _logWidget(Element widget) {
+//   print('Widget: ${widget.widget.runtimeType}');
+//   widget.visitChildElements(_logWidget);
+// }
+
+/// A navigator observer that logs navigation events using the Tealeaf plugin.
+///
+/// This [NavigatorObserver] subclass logs the navigation events, such as push and pop,
+/// and communicates with the Tealeaf plugin to log the screen layout events.
+class LoggingNavigatorObserver extends NavigatorObserver {
+  /// Constructs a [LoggingNavigatorObserver].
+  LoggingNavigatorObserver() : super();
+
+  // static const List<dynamic> _widgetTypes = [Text, ElevatedButton];
+
+  /// Called when a route is pushed onto the navigator.
+  ///
+  /// The `route` parameter represents the route being pushed onto the navigator.
+  /// The `previousRoute` parameter represents the route that was previously on top of the navigator.
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    PluginTealeaf.logScreenLayout('LOAD', route.settings.name.toString());
+    _logWidgetTree();
+
+    print('PluginTealeaf.logScreenLayout - Pushed ${route.settings.name}');
+  }
+
+  /// Called when a route is popped from the navigator.
+  ///
+  /// The `route` parameter represents the route being popped from the navigator.
+  /// The `previousRoute` parameter represents the route that will now be on top of the navigator.
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    PluginTealeaf.logScreenViewContextUnLoad(route.settings.name.toString(),
+        previousRoute != null ? previousRoute.settings.name.toString() : "");
+
+    print('PluginTealeaf.logScreenViewContextUnLoad -Popped ${route.settings.name}');
+  }
+}
+
+///
+/// Log tree from current screen frame.
+///
+void _logWidgetTree() {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsFlutterBinding.ensureInitialized();
+
+    // ignore: deprecated_member_use
+    final element = WidgetsBinding.instance.renderViewElement;
+    if (element != null) {
+      _parseWidgetTree(element);
+    }
+  });
+}
+
+List<Map<String, dynamic>> _parseWidgetTree(Element element) {
+  final widgetTree = <Map<String, dynamic>>[];
+
+  // Recursively parse the widget tree
+  void traverse(Element element, [int depth = 0]) {
+    final widget = element.widget;
+    final type = widget.runtimeType.toString();
+
+    // For accessibility
+    //getSemanticsNode(element);
+
+    if (widget is Text ||
+        widget is ElevatedButton ||
+        widget is TextFormField ||
+        widget is TextField ||
+        widget is Checkbox ||
+        widget is CheckboxListTile ||
+        widget is Switch ||
+        widget is SwitchListTile ||
+        widget is Slider ||
+        widget is Radio ||
+        widget is RadioListTile ||
+        widget is DropdownButton ||
+        widget is DropdownMenuItem ||
+        widget is ListView ||
+        widget is GridView ||
+        widget is Card ||
+        widget is AppBar ||
+        widget is BottomNavigationBar ||
+        widget is Drawer ||
+        widget is AlertDialog ||
+        widget is SnackBar ||
+        widget is Image ||
+        widget is Icon) {
+      final renderObject = element.renderObject as RenderBox?;
+      final position = renderObject?.localToGlobal(Offset.zero);
+      final size = renderObject?.size;
+
+      final widgetData = {
+        'type': type,
+        'text': widget is Text ? widget.data : "",
+        'position': position != null
+            ? 'x: ${position.dx}, y: ${position.dy}, width: ${size?.width}, height: ${size?.height}'
+            : "",
+      };
+      
+      print ('WidgetData - ${widget.toString()}');
+
+      widgetTree.add(widgetData);
+    }
+
+    element.visitChildren((child) {
+      traverse(child, depth + 1);
+      return;
+    });
+  }
+
+  // Starting to parse tree
+  traverse(element, 0);
+
+  // Encode the JSON object
+  String jsonString = jsonEncode(widgetTree);
+
+  PluginTealeaf.tlApplicationCustomEvent(eventName: jsonString);
+
+  return widgetTree;
+}
+
+/// Tealeaf Log Exception.
+/// 
+/// 
 class TealeafException implements Exception {
   TealeafException.create(
       {required int code,
@@ -39,6 +276,9 @@ class TealeafException implements Exception {
   String? get getNativeDetails => nativeDetails;
 }
 
+/// Tealeaf Plugin API calls.
+///
+///
 class PluginTealeaf {
   static const MethodChannel _channel = MethodChannel('tl_flutter_plugin');
 
@@ -76,10 +316,9 @@ class PluginTealeaf {
 
   static Future<String> get pluginVersion async {
     try {
-
       // TODO:
       // final String pubspecData = ("See tl_flutter_plugin version in pubspec.yaml.");
-      
+
       return "2.0.0";
     } on Exception catch (e) {
       throw TealeafException.create(
@@ -135,7 +374,7 @@ class PluginTealeaf {
 
   static Future<void> tlApplicationCustomEvent(
       {required String? eventName,
-      Map<String, String>? customData,
+       Map<String, String?>? customData,
       int? logLevel}) async {
     if (eventName == null) {
       throw TealeafException.create(code: 6, msg: 'eventName is null');
@@ -218,12 +457,70 @@ class PluginTealeaf {
     }
   }
 
+  /// Logs a screen layout event to the app. The event can be a load, unload, or visit event.
+  ///
+  /// The `tlType` argument should be a string representing the type of screen transition:
+  /// - "LOAD" for when the screen is being loaded,
+  /// - "UNLOAD" for when the screen is being unloaded,
+  /// - "VISIT" for when the screen is visited.
+  ///
+  /// The `name` argument is the name of the screen that is being transitioned to/from.
+  ///
+  /// Throws a [TealeafException] if the provided `tlType` argument is not one of the allowed types
+  /// or when the native platform throws a [PlatformException].
+  static Future<void> logScreenLayout(String tlType, String name) async {
+    try {
+      if (["LOAD", "UNLOAD", "VISIT"].contains(tlType)) {
+        // final String timeString = timestamp.inMicroseconds.toString();
+
+        // Send the screen view event to the native side
+        return await _channel.invokeMethod('logScreenLayout',
+            <dynamic, dynamic>{'tlType': tlType, 'name': name});
+      }
+
+      throw TealeafException.create(
+          code: 2, msg: 'Illegal screenview transition type');
+    } on PlatformException catch (pe) {
+      throw TealeafException(pe,
+          msg: 'Unable to process screen view (update) message!');
+    }
+  }
+
+  static Future<void> logScreenViewContextUnLoad(
+      String logicalPageName, String referrer) async {
+    try {
+      // Send the screen view event to the native side
+      return await _channel.invokeMethod('logScreenViewContextUnLoad',
+          <dynamic, dynamic>{'name': logicalPageName, 'referrer': referrer});
+    } on PlatformException catch (pe) {
+      throw TealeafException(pe,
+          msg:
+              'Unable to process logScreenViewContextUnLoad (update) message!');
+    }
+  }
+
+  /// Triggers a screen view event in the app. The event can be a load, unload or visit event.
+  ///
+  /// The `tlType` argument should be a string representing the type of screen transition:
+  /// - "LOAD" for when the screen is being loaded,
+  /// - "UNLOAD" for when the screen is being unloaded,
+  /// - "VISIT" for when the screen is visited.
+  ///
+  /// The `timestamp` argument should be a [Duration] object representing the point in time
+  /// the screen transition happened.
+  ///
+  /// The `layoutParameters` is an optional list of maps where each map has a `String` key and dynamic value.
+  /// It can be used to pass extra parameters related to the screen transition.
+  ///
+  /// Throws a [TealeafException] if the provided `tlType` argument is not one of the allowed types
+  /// or when the native platform throws a [PlatformException].
   static Future<void> onScreenview(String tlType, Duration timestamp,
       [List<Map<String, dynamic>>? layoutParameters]) async {
     try {
       if (["LOAD", "UNLOAD", "VISIT"].contains(tlType)) {
         final String timeString = timestamp.inMicroseconds.toString();
 
+        // Send the screen view event to the native side
         return await _channel.invokeMethod('screenview', <dynamic, dynamic>{
           'tlType': tlType,
           'timeStamp': timeString,
@@ -268,3 +565,92 @@ class PluginTealeaf {
     return false;
   }
 }
+
+class UserInteractionLogger {
+  // static const MethodChannel _channel = MethodChannel('tl_flutter_plugin');
+
+  static void initialize() {
+    // Initialize the plugin
+    // _channel.invokeMethod('initialize');
+
+    // _setupGestureLogging();
+    // _setupNavigationLogging();
+    _setupPerformanceLogging();
+  }
+
+  // static void _setupGestureLogging() {
+  //   // Enable gesture logging
+  //   GestureBinding.instance.pointerRouter.addGlobalRoute((PointerEvent event) {
+  //     _channel.invokeMethod('logGesture', <String, dynamic>{
+  //       'timestamp': DateTime.now().millisecondsSinceEpoch,
+  //       'event': describeEnum(event.runtimeType),
+  //       // Add additional properties based on the event type if needed
+  //     });
+  //   });
+  // }
+
+  // static void _setupNavigationLogging() {
+    // Enable navigation change logging
+    // final RouteObserver<PageRoute<dynamic>> routeObserver =
+    //     RouteObserver<PageRoute<dynamic>>();
+    // Navigator.observer = routeObserver;
+    // routeObserver.subscribe(null, (Route<dynamic> route, Route<dynamic>? previousRoute) {
+    //   _channel.invokeMethod('logNavigationChange', <String, dynamic>{
+    //     'timestamp': DateTime.now().millisecondsSinceEpoch,
+    //     'from': previousRoute?.settings.name,
+    //     'to': route.settings.name,
+    //   });
+    // } as PageRoute);
+  // }
+
+  static void _setupPerformanceLogging() {
+    // Enable performance metric logging
+    // WidgetsBinding.instance.addObserver(_PerformanceObserver());
+  }
+}
+
+/// Log App Performance
+///
+///
+// class _PerformanceObserver extends WidgetsBindingObserver {
+//   @override
+//   void didChangeAppLifecycleState(AppLifecycleState state) {
+//     if (state == AppLifecycleState.resumed) {
+//       print('_PerformanceObserver: $state');
+
+//       final startTime = DateTime.now().millisecondsSinceEpoch;
+//       WidgetsBinding.instance.addPostFrameCallback((_) {
+//         final endTime = DateTime.now().millisecondsSinceEpoch;
+//         final duration = endTime - startTime;
+//         // UserInteractionLogger._channel
+//         //     .invokeMethod('logPerformanceMetric', <String, dynamic>{
+//         //   'timestamp': startTime,
+//         //   'duration': duration,
+//         // });
+//       });
+//     }
+//   }
+// }
+
+// class WidgetTreeLogger {
+//   static void log(Widget widget, [int depth = 0]) {
+//     final indent = ' ' * depth;
+//     debugPrint('$indent${widget.runtimeType}');
+
+//     if (widget is Text) {
+//       debugPrint('$indent Text: "${(widget as Text).data}"');
+//     } else if (widget is Image) {
+//       debugPrint('$indent Image');
+//     }
+
+//     if (widget is ParentDataWidget) {
+//       log((widget as ParentDataWidget).child, depth + 1);
+//     } else if (widget is MultiChildRenderObjectWidget) {
+//       (widget as MultiChildRenderObjectWidget)
+//           .children
+//           .forEach((child) => log(child, depth + 1));
+//     } else if (widget is ProxyWidget) {
+//       log((widget as ProxyWidget).child, depth + 1);
+//     }
+//   }
+// }

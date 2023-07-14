@@ -1,0 +1,46 @@
+name: tl_flutter_plugin
+description: AOP for Flutter. AspectD is an AOP(aspect oriented programming) framework for dart. It provides call&execute&inject grammar.
+version: 0.9.7
+
+environment:
+  sdk: ">=2.3.0-dev.68.0 <3.0.0"
+
+dev_dependencies:
+
+  args: any
+  path: any
+  yaml: any
+
+dependency_overrides:
+
+  package_config: 2.0.2
+
+#  meta:
+#    path: ../../../SDK/dart-sdk/2.5.3/pkg/meta
+#
+#  frontend_server:
+#    path: ../../../SDK/dart-sdk/2.5.3/pkg/frontend_server
+#
+#  _fe_analyzer_shared:
+#    path: ../../../SDK/dart-sdk/2.5.3/pkg/_fe_analyzer_shared
+
+#  vm:
+#    path: ../../sdk/pkg/vm
+#
+#  kernel:
+#    path: ../../sdk/pkg/kernel
+
+  meta:
+    path: pkg/meta
+
+  frontend_server:
+      path: pkg/frontend_server
+
+  _fe_analyzer_shared:
+      path: pkg/_fe_analyzer_shared
+
+  vm:
+      path: pkg/vm
+
+  kernel:
+      path: pkg/kernel

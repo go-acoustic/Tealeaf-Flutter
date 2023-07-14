@@ -23,10 +23,15 @@
 # Flutter/Dart/Pub related
 # Libraries should not include pubspec.lock, 
 # per https://dart.dev/guides/libraries/private-files#pubspec.lock
-pubspec.lock
 example/ios/Podfile.lock
 **/doc/api/
 .dart_tool/
 .packages
 build/
 inner/pkg
+scripts/test-results
+test-results/
+test/test-results/
+test/.fluttet-plugins-dependencies
+scripts/test-results/
+scripts/cloneRepo/

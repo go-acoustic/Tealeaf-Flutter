@@ -24,10 +24,10 @@
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-  FlutterMethodChannel* channel = [FlutterMethodChannel
-      methodChannelWithName:@"tl_flutter_plugin" binaryMessenger:[registrar messenger]];
-  TlFlutterPlugin* instance = [[TlFlutterPlugin alloc] init];
-  [registrar addMethodCallDelegate:instance channel:channel];
+    FlutterMethodChannel* channel = [FlutterMethodChannel
+        methodChannelWithName:@"tl_flutter_plugin" binaryMessenger:[registrar messenger]];
+    TlFlutterPlugin* instance = [[TlFlutterPlugin alloc] init];
+    [registrar addMethodCallDelegate:instance channel:channel];
 }
 
 - (id) init {

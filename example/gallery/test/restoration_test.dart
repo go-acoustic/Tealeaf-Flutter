@@ -11,7 +11,7 @@ void main() {
   testWidgets(
     'State restoration test - Home Page',
     (tester) async {
-      await tester.pumpWidget(GalleryApp());
+      await tester.pumpWidget(const GalleryApp());
       // Let the splash page animations complete.
       await tester.pump(const Duration(seconds: 1));
       expect(find.byType(HomePage), findsOneWidget);
@@ -62,7 +62,7 @@ void main() {
   testWidgets(
     'State restoration test -  Gallery Demo',
     (tester) async {
-      await tester.pumpWidget(GalleryApp());
+      await tester.pumpWidget(const GalleryApp());
       // Let the splash page animations complete.
       await tester.pump(const Duration(seconds: 1));
       expect(find.byType(HomePage), findsOneWidget);
@@ -104,7 +104,7 @@ void main() {
   testWidgets(
     'State restoration test - Reply Study',
     (tester) async {
-      await tester.pumpWidget(GalleryApp());
+      await tester.pumpWidget(const GalleryApp());
       // Let the splash page animations complete.
       await tester.pump(const Duration(seconds: 1));
 

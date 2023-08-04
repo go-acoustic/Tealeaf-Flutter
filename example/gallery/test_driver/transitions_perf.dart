@@ -28,5 +28,5 @@ Future<String> _handleMessages(String? message) async {
 
 void main() {
   enableFlutterDriverExtension(handler: _handleMessages);
-  runApp(GalleryApp(isTestMode: true));
+  runApp(const GalleryApp(isTestMode: true));
 }

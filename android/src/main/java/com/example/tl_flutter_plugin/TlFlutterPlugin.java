@@ -1030,7 +1030,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
             if (action == MotionEvent.ACTION_UP) {
                 lastPointerUpEvent = args;
                 if (Tealeaf.getGesturePlaceHolder().size() < 1) {
-                    final GesturePlaceHolder gph = new GesturePlaceHolder(Tealeaf.getCurrentSessionId());
+                    final GesturePlaceHolder gph = new GesturePlaceHolder(Tealeaf.getCurrentSessionId(), "");
                     Tealeaf.getGesturePlaceHolder().add(gph);
                     TLFCache.addMessage(gph); // Placeholder needed fr Android native version of gesture control
                 }
@@ -1151,7 +1151,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
         LOGGER.log(Level.INFO, "Tealeaf log Exception message in " + TAG);
 
-        final boolean handled = checkForParameter(args, "handled");
+        final boolean handled = checkForParameter(args, "handled") == null ? true : false;
         final String widgetName = checkForParameter(args, "name");
         final String message = checkForParameter(args, "message");
         final String stacktrace = checkForParameter(args, "stacktrace");
@@ -1446,7 +1446,8 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
             gesture.setEventInfo(eventInfo);
             gesture.setTouches(touches);
 
-            if (LayoutUtil.canCaptureUserEvents(activity) && LayoutUtil.takeScreenShot(activity)) {
+            if (LayoutUtil.canCaptureUserEvents(activity, "") && LayoutUtil.canTakeScreenShot(activity, "")) {
+                
                 // TBD: No longer used? (updated to latest config files -- apparent change)
                 // Thread.sleep(EOCore.getConfigItemLong("GestureConfirmedScreenshotDelay", TealeafEOLifecycleObject.getInstance()));
                 gesture.setBase64Image(lastPageImage.getBase64Image());

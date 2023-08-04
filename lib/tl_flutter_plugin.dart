@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-// import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'logger.dart';
 import 'dart:convert';
-// import 'dart:isolate';
 
 /// A widget that logs UI change events.
 ///
@@ -17,6 +15,10 @@ class Tealeaf extends StatelessWidget {
   /// The child widget to which the [Tealeaf] is applied.
   final Widget child;
 
+  // Create an instance of LoggingNavigatorObserver
+  static final LoggingNavigatorObserver loggingNavigatorObserver =
+      LoggingNavigatorObserver();
+
   /// Constructs a [Tealeaf] with the given child.
   ///
   /// The [child] parameter is the widget to which the [Tealeaf] is applied.
@@ -25,103 +27,29 @@ class Tealeaf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     UserInteractionLogger.initialize(); // Initialize the UserInteractionLogger
-    /// In this example, printWidgetTree is called after the frame has been built, ensuring that the entire widget
-    /// tree for this frame is available. The context is cast to Element to pass it to printWidgetTree.
-
-    // WidgetsBinding.instance
-    //     .addPostFrameCallback((_) => WidgetTreeLogger.log(child));
-
-    // WidgetsBinding.instance!.addPostFrameCallback((_) {
-    //   printWidgetTree(context as Element);
-    // });
 
     return Listener(
-      onPointerDown: (details) {
-        logEvent('onPointerDown', details);
-      },
-      onPointerUp: (details) {
-        logEvent('onPointerUp', details);
-      },
-      onPointerMove: (details) {
-        logEvent('onPointerMove', details);
-      },
-      onPointerCancel: (details) {
-        logEvent('onPointerCancel', details);
-      },
       child: child,
     );
   }
 
-  void printWidgetTree(Element element, [String indent = '']) {
-    print('$indent${element.widget.runtimeType}');
-    element.visitChildElements((child) {
-      printWidgetTree(child, '$indent  ');
-    });
-  }
-
-  /// Logs the UI change event.
   ///
-  /// The [eventType] parameter represents the type of the UI change event, such as 'onPointerDown'.
-  /// The [event] parameter contains additional details or data related to the event.
-  void logEvent(String eventType, dynamic event) {
-    if (kDebugMode) {
-      print('$eventType: $event');
-    }
+  /// Converts erorr details
+  ///
+  static Map<String, dynamic> flutterErrorDetailsToMap(
+      FlutterErrorDetails details) {
+    return {
+      'message': details.exception.toString(),
+      'exceptionType': details.exception.runtimeType.toString(),
+      'stacktrace': details.stack.toString(),
+      'library': details.library,
+      'name': details.context.toString(),
+      'silent': details.silent,
+      'handled': false,
+      // Add other fields as needed
+    };
   }
-
-  // /// Log in different thread
-  // void logTreeInIsolate(Widget widget) {
-  //   final port = ReceivePort();
-  //   Isolate.spawn(logTree, port.sendPort);
-  //   port.listen((message) {
-  //     print(message);
-  //   });
-  // }
-
-  // void logTree(SendPort port) {
-  //   _log(child, 0, port);
-  // }
-
-  // void _log(Widget widget, int depth, SendPort port) {
-  //   final indent = ' ' * depth;
-  //   port.send('$indent${widget.runtimeType}');
-
-  //   if (widget is ParentDataWidget) {
-  //     _log((widget as ParentDataWidget).child, depth + 1, port);
-  //   } else if (widget is MultiChildRenderObjectWidget) {
-  //     (widget as MultiChildRenderObjectWidget).children.forEach((child) {
-  //       _log(child, depth + 1, port);
-  //     });
-  //   } else if (widget is ProxyWidget) {
-  //     _log((widget as ProxyWidget).child, depth + 1, port);
-  //   }
-  // }
 }
-
-// void _logTree() {
-//   // Get root state
-//   final state = WidgetsBinding.instance.renderViewElement;
-
-//   // Log tree on a separate isolate
-//   final receivePort = ReceivePort();
-//   Isolate.spawn(_log, receivePort.sendPort);
-//   receivePort.first.then((sendPort) {
-//     sendPort.send(state);
-//   });
-// }
-
-// void _log(SendPort sendPort) {
-//   final receivePort = ReceivePort();
-//   sendPort.send(receivePort.sendPort);
-//   receivePort.first.then((state) {
-//     _logWidget(state as Element);
-//   });
-// }
-
-// void _logWidget(Element widget) {
-//   print('Widget: ${widget.widget.runtimeType}');
-//   widget.visitChildElements(_logWidget);
-// }
 
 /// A navigator observer that logs navigation events using the Tealeaf plugin.
 ///
@@ -130,8 +58,6 @@ class Tealeaf extends StatelessWidget {
 class LoggingNavigatorObserver extends NavigatorObserver {
   /// Constructs a [LoggingNavigatorObserver].
   LoggingNavigatorObserver() : super();
-
-  // static const List<dynamic> _widgetTypes = [Text, ElevatedButton];
 
   /// Called when a route is pushed onto the navigator.
   ///
@@ -154,7 +80,8 @@ class LoggingNavigatorObserver extends NavigatorObserver {
     PluginTealeaf.logScreenViewContextUnLoad(route.settings.name.toString(),
         previousRoute != null ? previousRoute.settings.name.toString() : "");
 
-    print('PluginTealeaf.logScreenViewContextUnLoad -Popped ${route.settings.name}');
+    print(
+        'PluginTealeaf.logScreenViewContextUnLoad -Popped ${route.settings.name}');
   }
 }
 
@@ -163,7 +90,7 @@ class LoggingNavigatorObserver extends NavigatorObserver {
 ///
 void _logWidgetTree() {
   WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsFlutterBinding.ensureInitialized();
+    WidgetsFlutterBinding.ensureInitialized();
 
     // ignore: deprecated_member_use
     final element = WidgetsBinding.instance.renderViewElement;
@@ -218,8 +145,8 @@ List<Map<String, dynamic>> _parseWidgetTree(Element element) {
             ? 'x: ${position.dx}, y: ${position.dy}, width: ${size?.width}, height: ${size?.height}'
             : "",
       };
-      
-      print ('WidgetData - ${widget.toString()}');
+
+      // print('WidgetData - ${widget.toString()}');
 
       widgetTree.add(widgetData);
     }
@@ -241,9 +168,9 @@ List<Map<String, dynamic>> _parseWidgetTree(Element element) {
   return widgetTree;
 }
 
+///
 /// Tealeaf Log Exception.
-/// 
-/// 
+///
 class TealeafException implements Exception {
   TealeafException.create(
       {required int code,
@@ -276,8 +203,8 @@ class TealeafException implements Exception {
   String? get getNativeDetails => nativeDetails;
 }
 
-/// Tealeaf Plugin API calls.
 ///
+/// Tealeaf Plugin API calls.
 ///
 class PluginTealeaf {
   static const MethodChannel _channel = MethodChannel('tl_flutter_plugin');
@@ -374,7 +301,7 @@ class PluginTealeaf {
 
   static Future<void> tlApplicationCustomEvent(
       {required String? eventName,
-       Map<String, String?>? customData,
+      Map<String, String?>? customData,
       int? logLevel}) async {
     if (eventName == null) {
       throw TealeafException.create(code: 6, msg: 'eventName is null');
@@ -388,8 +315,11 @@ class PluginTealeaf {
     }
   }
 
+  ///
+  /// For Application level handled exception
+  ///
   static Future<void> tlApplicationCaughtException(
-      {Exception? caughtException,
+      {dynamic caughtException,
       StackTrace? stack,
       Map<String, String>? appData}) async {
     try {
@@ -410,6 +340,9 @@ class PluginTealeaf {
     }
   }
 
+  ///
+  /// For global unhandled exception
+  ///
   static Future<void> onTlException(
       {required Map<dynamic, dynamic> data}) async {
     try {
@@ -566,16 +499,26 @@ class PluginTealeaf {
   }
 }
 
+///
+/// UI Interaction Logger
+///
 class UserInteractionLogger {
   // static const MethodChannel _channel = MethodChannel('tl_flutter_plugin');
 
   static void initialize() {
+    ///
+    /// Catch unhandled app exception
+    ///
+    FlutterError.onError = (errorDetails) {
+      PluginTealeaf.onTlException(
+          data: Tealeaf.flutterErrorDetailsToMap(errorDetails));
+    };
     // Initialize the plugin
     // _channel.invokeMethod('initialize');
 
     // _setupGestureLogging();
     // _setupNavigationLogging();
-    _setupPerformanceLogging();
+    // _setupPerformanceLogging();
   }
 
   // static void _setupGestureLogging() {
@@ -590,17 +533,17 @@ class UserInteractionLogger {
   // }
 
   // static void _setupNavigationLogging() {
-    // Enable navigation change logging
-    // final RouteObserver<PageRoute<dynamic>> routeObserver =
-    //     RouteObserver<PageRoute<dynamic>>();
-    // Navigator.observer = routeObserver;
-    // routeObserver.subscribe(null, (Route<dynamic> route, Route<dynamic>? previousRoute) {
-    //   _channel.invokeMethod('logNavigationChange', <String, dynamic>{
-    //     'timestamp': DateTime.now().millisecondsSinceEpoch,
-    //     'from': previousRoute?.settings.name,
-    //     'to': route.settings.name,
-    //   });
-    // } as PageRoute);
+  // Enable navigation change logging
+  // final RouteObserver<PageRoute<dynamic>> routeObserver =
+  //     RouteObserver<PageRoute<dynamic>>();
+  // Navigator.observer = routeObserver;
+  // routeObserver.subscribe(null, (Route<dynamic> route, Route<dynamic>? previousRoute) {
+  //   _channel.invokeMethod('logNavigationChange', <String, dynamic>{
+  //     'timestamp': DateTime.now().millisecondsSinceEpoch,
+  //     'from': previousRoute?.settings.name,
+  //     'to': route.settings.name,
+  //   });
+  // } as PageRoute);
   // }
 
   static void _setupPerformanceLogging() {

@@ -48,7 +48,6 @@ com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.11.1=classpath
 com.fasterxml.jackson.module:jackson-module-kotlin:2.11.1=classpath
 com.fasterxml.woodstox:woodstox-core:6.2.1=classpath
 com.github.gundy:semver4j:0.16.4=classpath
-com.github.spotbugs.snom:spotbugs-gradle-plugin:4.0.0=debugCompileClasspath
 com.google.android.gms:strict-version-matcher-plugin:1.2.2=classpath
 com.google.android:annotations:4.1.1.4=classpath
 com.google.api.grpc:proto-google-common-protos:1.12.0=classpath

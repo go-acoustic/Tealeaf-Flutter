@@ -37,22 +37,23 @@ void main() async {
     FlutterError.onError = (errorDetails) {
       FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
     };
-    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Tealeaf
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
   }
 
+  ///
+  /// Add Tealeaf Wrapper for auto instrumentation
+  /// 
   runApp(Tealeaf(
-    child: GalleryApp()));
+    child: const GalleryApp()));
 }
 
-class GalleryApp extends StatelessWidget {
-    // Create an instance of LoggingNavigatorObserver
-  final LoggingNavigatorObserver loggingNavigatorObserver = LoggingNavigatorObserver();
 
-  GalleryApp({
+class GalleryApp extends StatelessWidget {
+  const GalleryApp({
     super.key,
     this.initialRoute,
     this.isTestMode = false,
@@ -85,8 +86,10 @@ class GalleryApp extends StatelessWidget {
           final options = GalleryOptions.of(context);
           final hasHinge = MediaQuery.of(context).hinge?.bounds != null;
           return MaterialApp(
-            // Add the loggingNavigatorObserver to the navigatorObservers list
-            navigatorObservers: [loggingNavigatorObserver],
+            ///
+            /// Add the required Tealeaf loggingNavigatorObserver to the navigatorObservers list
+            /// 
+            navigatorObservers: [Tealeaf.loggingNavigatorObserver],
 
             restorationScopeId: 'rootGallery',
             title: 'Flutter Gallery',

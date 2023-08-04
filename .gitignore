@@ -32,6 +32,7 @@ inner/pkg
 scripts/test-results
 test-results/
 test/test-results/
+test/.fluttet-plugins
 test/.fluttet-plugins-dependencies
 scripts/test-results/
 scripts/cloneRepo/

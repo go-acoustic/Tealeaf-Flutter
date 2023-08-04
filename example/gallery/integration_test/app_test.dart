@@ -9,7 +9,7 @@ void main() {
   group('end-to-end test', () {
     testWidgets('tap on the floating action button, verify counter',
         (tester) async {
-      GalleryApp();
+      const GalleryApp();
       await tester.pumpAndSettle();
 
 

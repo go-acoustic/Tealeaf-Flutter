@@ -8,7 +8,7 @@ import 'package:gallery/main.dart';
 
 void main() {
   testWidgets('Home page hides settings semantics when closed', (tester) async {
-    await tester.pumpWidget(GalleryApp());
+    await tester.pumpWidget(const GalleryApp());
 
     await tester.pump(const Duration(seconds: 1));
 
@@ -25,7 +25,7 @@ void main() {
   });
 
   testWidgets('Home page list view is the primary list view', (tester) async {
-    await tester.pumpWidget(GalleryApp());
+    await tester.pumpWidget(const GalleryApp());
     await tester.pumpAndSettle();
 
     ListView listview =

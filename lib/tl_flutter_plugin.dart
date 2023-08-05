@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -546,10 +545,10 @@ class UserInteractionLogger {
   // } as PageRoute);
   // }
 
-  static void _setupPerformanceLogging() {
+  // static void _setupPerformanceLogging() {
     // Enable performance metric logging
     // WidgetsBinding.instance.addObserver(_PerformanceObserver());
-  }
+  // }
 }
 
 /// Log App Performance

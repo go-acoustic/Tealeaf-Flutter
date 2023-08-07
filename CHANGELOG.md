@@ -1,3 +1,48 @@
+## 2.2.0
+Beta tl_flutter_plugin Change Notes: 
+Bug Fixes
+
+- Minor changes.
+
+
+Improvements
+
+- Removed AspectD dependency, fixed Flutter compat. Issues
+- Support Gestures
+- Support multiple screen capture
+- Support latest Flutter SDK versions, SDK releases
+- Support different types of sample apps like Gallery, E-commerce and etc
+- Support Flutter App global unhandled exceptions
+- Tealeaf Wrapper auto instrumentation
+- Meta data auto logging on screen change
+
+Our environment for this release:
+
+- Visual Studio Code Version: 1.80.0 (Universal)
+- Xcode 14.2
+- MacOS 13.2
+- iOS 12.x to 15.x
+- Supported architectures:
+	- simulator
+		- arm64
+		- x86_64
+	- device
+		- arm64
+-Android 21-34
+
+List of items are in the roadmap but not supported yet
+
+- Masking
+- Input Text Value Change
+- Accessibility object
+- Network Connection logging
+- Scripts to automate instrumentation setup
+- App performance metrics
+
+Known Issues
+
+- Only Android & IOS platforms are supported.
+- When Navigation route isn't set, replay shows null screenview.
 ## 2.1.0
 Beta TL-Flutter-Plugin Change Notes: 
 Bug Fixes

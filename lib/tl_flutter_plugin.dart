@@ -14,6 +14,11 @@ class Tealeaf extends StatelessWidget {
   /// The child widget to which the [Tealeaf] is applied.
   final Widget child;
 
+  /// Use as reference time to calculate widget load time
+  static int startTime = DateTime.now().millisecondsSinceEpoch;
+
+  static bool showDebugLog = false;
+
   // Create an instance of LoggingNavigatorObserver
   static final LoggingNavigatorObserver loggingNavigatorObserver =
       LoggingNavigatorObserver();
@@ -23,11 +28,20 @@ class Tealeaf extends StatelessWidget {
   /// The [child] parameter is the widget to which the [Tealeaf] is applied.
   Tealeaf({Key? key, required this.child}) : super(key: key);
 
+  static void init(bool printLog) {
+    startTime = DateTime.now().millisecondsSinceEpoch;
+    showDebugLog = printLog;
+  }
+
   @override
   Widget build(BuildContext context) {
     UserInteractionLogger.initialize(); // Initialize the UserInteractionLogger
 
     return Listener(
+      onPointerUp: (details) {
+        // Start time as reference when there's navigation change
+        Tealeaf.startTime = DateTime.now().millisecondsSinceEpoch;
+      },
       child: child,
     );
   }
@@ -64,10 +78,25 @@ class LoggingNavigatorObserver extends NavigatorObserver {
   /// The `previousRoute` parameter represents the route that was previously on top of the navigator.
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    // final startTime = DateTime.now().millisecondsSinceEpoch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final endTime = DateTime.now().millisecondsSinceEpoch;
+      final int duration = endTime - Tealeaf.startTime;
+
+      PluginTealeaf.tlApplicationCustomEvent(
+        eventName: 'Performance Metric',
+        customData: {
+          'Navigation': route.settings.name.toString(),
+          'Load Time': duration.toString(),
+        },
+        logLevel: 1,
+      );
+    });
+
     PluginTealeaf.logScreenLayout('LOAD', route.settings.name.toString());
     _logWidgetTree();
 
-    print('PluginTealeaf.logScreenLayout - Pushed ${route.settings.name}');
+    tlLogger.v('PluginTealeaf.logScreenLayout - Pushed ${route.settings.name}');
   }
 
   /// Called when a route is popped from the navigator.
@@ -79,7 +108,7 @@ class LoggingNavigatorObserver extends NavigatorObserver {
     PluginTealeaf.logScreenViewContextUnLoad(route.settings.name.toString(),
         previousRoute != null ? previousRoute.settings.name.toString() : "");
 
-    print(
+    tlLogger.v(
         'PluginTealeaf.logScreenViewContextUnLoad -Popped ${route.settings.name}');
   }
 }
@@ -145,7 +174,7 @@ List<Map<String, dynamic>> _parseWidgetTree(Element element) {
             : "",
       };
 
-      // print('WidgetData - ${widget.toString()}');
+      tlLogger.v('WidgetData - ${widget.toString()}');
 
       widgetTree.add(widgetData);
     }
@@ -502,8 +531,6 @@ class PluginTealeaf {
 /// UI Interaction Logger
 ///
 class UserInteractionLogger {
-  // static const MethodChannel _channel = MethodChannel('tl_flutter_plugin');
-
   static void initialize() {
     ///
     /// Catch unhandled app exception
@@ -512,12 +539,9 @@ class UserInteractionLogger {
       PluginTealeaf.onTlException(
           data: Tealeaf.flutterErrorDetailsToMap(errorDetails));
     };
-    // Initialize the plugin
-    // _channel.invokeMethod('initialize');
-
     // _setupGestureLogging();
     // _setupNavigationLogging();
-    // _setupPerformanceLogging();
+    _setupPerformanceLogging();
   }
 
   // static void _setupGestureLogging() {
@@ -545,54 +569,72 @@ class UserInteractionLogger {
   // } as PageRoute);
   // }
 
-  // static void _setupPerformanceLogging() {
+  static void _setupPerformanceLogging() {
     // Enable performance metric logging
-    // WidgetsBinding.instance.addObserver(_PerformanceObserver());
-  // }
+    WidgetsBinding.instance.addObserver(PerformanceObserver());
+  }
 }
 
 /// Log App Performance
 ///
 ///
-// class _PerformanceObserver extends WidgetsBindingObserver {
-//   @override
-//   void didChangeAppLifecycleState(AppLifecycleState state) {
-//     if (state == AppLifecycleState.resumed) {
-//       print('_PerformanceObserver: $state');
+class PerformanceObserver extends WidgetsBindingObserver {
+  void _performanceCustomEvent(AppLifecycleState state) {
+    final startTime = DateTime.now().millisecondsSinceEpoch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final endTime = DateTime.now().millisecondsSinceEpoch;
+      final int duration = endTime - startTime;
 
-//       final startTime = DateTime.now().millisecondsSinceEpoch;
-//       WidgetsBinding.instance.addPostFrameCallback((_) {
-//         final endTime = DateTime.now().millisecondsSinceEpoch;
-//         final duration = endTime - startTime;
-//         // UserInteractionLogger._channel
-//         //     .invokeMethod('logPerformanceMetric', <String, dynamic>{
-//         //   'timestamp': startTime,
-//         //   'duration': duration,
-//         // });
-//       });
-//     }
-//   }
-// }
+      PluginTealeaf.tlApplicationCustomEvent(
+        eventName: 'Performance Metric',
+        customData: {
+          'AppLifecycleState': state.toString(),
+          'Load Time': duration.toString(),
+        },
+        logLevel: 1,
+      );
 
-// class WidgetTreeLogger {
-//   static void log(Widget widget, [int depth = 0]) {
-//     final indent = ' ' * depth;
-//     debugPrint('$indent${widget.runtimeType}');
+      tlLogger.v('_PerformanceObserver($state): $duration');
+    });
+  }
 
-//     if (widget is Text) {
-//       debugPrint('$indent Text: "${(widget as Text).data}"');
-//     } else if (widget is Image) {
-//       debugPrint('$indent Image');
-//     }
+  @override
+  void didHaveMemoryPressure() {
+    PluginTealeaf.tlApplicationCustomEvent(
+      eventName: 'Performance Metric',
+      customData: {
+        'didHaveMemoryPressure': 'true',
+      },
+      logLevel: 1,
+    );
 
-//     if (widget is ParentDataWidget) {
-//       log((widget as ParentDataWidget).child, depth + 1);
-//     } else if (widget is MultiChildRenderObjectWidget) {
-//       (widget as MultiChildRenderObjectWidget)
-//           .children
-//           .forEach((child) => log(child, depth + 1));
-//     } else if (widget is ProxyWidget) {
-//       log((widget as ProxyWidget).child, depth + 1);
-//     }
-//   }
-// }
+    super.didHaveMemoryPressure();
+  }
+
+  // @override
+  // void didChangeMetrics() {
+  //   final startTime = DateTime.now().millisecondsSinceEpoch;
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     // This callback will be executed after the frame is rendered.
+  //     final endTime = DateTime.now().millisecondsSinceEpoch;
+  //     final duration = endTime - startTime;
+  //     print("Frame rendering duration: ${duration}ms");
+
+  //     PluginTealeaf.tlApplicationCustomEvent(
+  //       eventName: 'Performance Metric',
+  //       customData: {
+  //         'didChangeMetrics': 'UI changes such as rotation.',
+  //         'Load Time': duration.toString(),
+  //       },
+  //       logLevel: 1,
+  //     );
+  //   });
+
+  //   super.didChangeMetrics();
+  // }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _performanceCustomEvent(state);
+  }
+}

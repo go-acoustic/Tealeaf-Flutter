@@ -43,6 +43,9 @@ void main() async {
       return true;
     };
   }
+  
+  // Init Tealeaf plugin, show/hide print log
+  Tealeaf.init(true);
 
   ///
   /// Add Tealeaf Wrapper for auto instrumentation
@@ -64,13 +67,6 @@ class GalleryApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-      PluginTealeaf.tlApplicationCustomEvent(
-        eventName: 'Gally App landing page, Custom test event',
-        customData: {
-          'data1': 'END OF UI BUILD',
-          'time': DateTime.now().toString()
-        });
-
     return ModelBinding(
       initialModel: GalleryOptions(
         themeMode: ThemeMode.system,

@@ -7,14 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:tl_flutter_plugin/tl_flutter_plugin.dart';
 import 'package:tl_flutter_plugin/logger.dart';
-// import 'dart:ui';
-// import 'package:flutter/gestures.dart';
-// import 'package:flutter/semantics.dart';
-// import 'package:flutter/services.dart';
-// import 'package:tl_flutter_plugin/timeit.dart';
 
-// TBD: Add appropriate class documentation (before publishing to pub.dev)
-
+/// Tracks Widgets during runtime, for Tealeaf type 10 & type 11
+///
+///
 class WidgetPath {
   WidgetPath();
 
@@ -46,9 +42,10 @@ class WidgetPath {
       final dynamic currentWidget = parent.widget;
       final List<Widget> children = currentWidget.children;
       result = children.indexOf(child);
-    } on NoSuchMethodError {
+    } catch (e) {
       result = -1;
     }
+    
     return result;
   }
 
@@ -193,11 +190,6 @@ class WidgetPath {
       shorten ? str.replaceAll(RegExp(reduce), '') : str;
 }
 
-///
-///
-///
-
-
 typedef _Loader = Future<String> Function();
 
 class _TlConfiguration {
@@ -252,10 +244,10 @@ class _TlConfiguration {
 }
 
 // ignore: lint, unused_element
-class _TlBinder extends WidgetsBindingObserver {
-  factory _TlBinder() => _instance ?? _TlBinder._internal();
+class TlBinder extends WidgetsBindingObserver {
+  factory TlBinder() => _instance ?? TlBinder._internal();
 
-  _TlBinder._internal() {
+  TlBinder._internal() {
     _instance = this;
     tlLogger.v('TlBinder INSTANTIATED!!');
   }
@@ -267,7 +259,7 @@ class _TlBinder extends WidgetsBindingObserver {
   static int rapidSequenceCompleteMs = 2 * rapidFrameRateLimitMs;
   static bool initRapidFrameRate = true;
 
-  static _TlBinder? _instance;
+  static TlBinder? _instance;
   static List<Map<String, dynamic>>? layoutParametersForGestures;
 
   bool initEnvironment = true;
@@ -282,6 +274,7 @@ class _TlBinder extends WidgetsBindingObserver {
   List<dynamic>? maskIds;
   List<dynamic>? maskValuePatterns;
 
+  // ignore: library_private_types_in_public_api
   _Swipe? scrollCapture;
 
   void startScroll(Offset? position, Duration? timeStamp) {
@@ -339,7 +332,7 @@ class _TlBinder extends WidgetsBindingObserver {
               },
               'direction': direction,
             },
-            layoutParameters: _TlBinder.layoutParametersForGestures);
+            layoutParameters: TlBinder.layoutParametersForGestures);
       } else {
         tlLogger.v('Incomplete scroll before frame');
       }
@@ -420,8 +413,8 @@ class _TlBinder extends WidgetsBindingObserver {
       logFrameTimer = null;
       skippingFrame = loggingScreen;
     } else {
-      tlLogger.v(
-          'Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
+      // tlLogger.v(
+      //     'Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
     }
     final int waitTime =
         (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
@@ -438,7 +431,9 @@ class _TlBinder extends WidgetsBindingObserver {
       await checkForScroll();
       tlLogger.v(
           'Logging screenview, delay: $timerDelay, wait: $waitTime, frame interval: $frameInterval, Layout count: ${layouts.length}');
-      await PluginTealeaf.onScreenview("LOAD", timestamp, layouts);
+      
+      // TODO:  We don't want to keep logging screen here
+      // await PluginTealeaf.onScreenview("LOAD", timestamp, layouts);
       loggingScreen = false;
     }
 
@@ -460,8 +455,8 @@ class _TlBinder extends WidgetsBindingObserver {
   }
 
   void handleScreenUpdate(Duration timestamp) {
-    tlLogger.v(
-        'Frame callback @$timestamp (widget path map size: ${WidgetPath.size})');
+    // tlLogger.v(
+    //     'Frame callback @$timestamp (widget path map size: ${WidgetPath.size})');
 
     final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
@@ -476,7 +471,17 @@ class _TlBinder extends WidgetsBindingObserver {
         tlLogger.v("Screenview UNLOAD");
         break;
       case AppLifecycleState.resumed:
-        tlLogger.v("Screenview VISIT");
+        // TODO:
+        // FlutterView? fv =
+        //     WidgetsBinding.instance.platformDispatcher.views.first;
+
+        // final WidgetsBinding binding =
+        //     WidgetsFlutterBinding.ensureInitialized();
+
+        // final RenderView? renderView = binding.renderView;
+        // final BuildContext? context = renderView?.attached ?? false ? renderView?.element?.buildContext : null;        // Widget _rootWidget = fv.context.widget;
+
+        tlLogger.v("Screenview LOAD");
         break;
       default:
         tlLogger.v("Screenview: ${state.toString()}");
@@ -565,6 +570,14 @@ class _TlBinder extends WidgetsBindingObserver {
     };
   }
 
+  /// Retrieves and processes information about the widgets in the current Flutter
+  /// widget tree and returns a list of layout data structures.
+  ///
+  /// These layout data structures contain information about the position, size,
+  /// and other properties of the widgets in the tree.
+  ///
+  /// Returns:
+  /// A list of layout data structures. Each layout data structure is a map.
   Future<List<Map<String, dynamic>>> getAllLayouts() async {
     final List<Map<String, dynamic>> layouts = [];
     final List<dynamic> pathList = WidgetPath.entryList();
@@ -817,34 +830,289 @@ class _Swipe {
 }
 
 ///
+/// Tealeaf static helper methods
 ///
-SemanticsNode? getSemanticsNode(BuildContext context) {
-  // Get the RenderObject from the BuildContext
-  final RenderObject? renderObject = context.findRenderObject();
+class TealeafHelper {
+  TealeafHelper();
 
-  // Check if the RenderObject is a RenderObjectWithChildMixin
-  if (renderObject is RenderObjectWithChildMixin) {
-    // Get the PipelineOwner from the RenderObject
-    final PipelineOwner? pipelineOwner = renderObject.owner;
+  // static const String _tap = "onTap";
+  // static const String _doubleTap = "onDoubleTap";
+  // static const String _longPress = "onLongPress";
+  // static const String _onPanStart = "onPanStart";
+  // static const String _onPanEnd = "onPanEnd";
+  // static const String _onPanUpdate = "onPanUpdate";
+  static const String _onScaleStart = "onScaleStart";
+  static const String _onScaleUpdate = "onScaleUpdate";
+  static const String _onScaleEnd = "onScaleEnd";
 
-    // Check if the PipelineOwner is not null
-    if (pipelineOwner != null) {
-      // Get the SemanticsOwner from the PipelineOwner
-      final SemanticsOwner? semanticsOwner = pipelineOwner.semanticsOwner;
+  // static const String _onVerticalDragStart = "onVerticalDragStart";
+  // static const String _onVerticalDragUpdate = "onVerticalDragUpdate";
+  // static const String _onVerticalDragEnd = "onVerticalDragEnd";
+  // static const String _onHorizontalDragStart = "onHorizontalDragStart";
+  // static const String _onHorizontalDragUpdate = "onHorizontalDragUpdate";
+  // static const String _onHorizontalDragEnd = "onHorizontalDragEnd";
+  static SemanticsNode? getSemanticsNode(BuildContext context) {
+    // Get the RenderObject from the BuildContext
+    final RenderObject? renderObject = context.findRenderObject();
 
-      // Check if the SemanticsOwner is not null
-      if (semanticsOwner != null) {
-        // Get the SemanticsNode from the SemanticsOwner using the findChild method
-        // final SemanticsNode? semanticsNode = semanticsOwner.rootSemanticsNode!.findChild(renderObject.semanticId);
-        final SemanticsNode? semanticsNode = semanticsOwner.rootSemanticsNode;
-        print('semanticsNode - accessibility');
-        print(semanticsNode.toString());
-        // Return the SemanticsNode
-        return semanticsNode;
+    // Check if the RenderObject is a RenderObjectWithChildMixin
+    if (renderObject is RenderObjectWithChildMixin) {
+      // Get the PipelineOwner from the RenderObject
+      final PipelineOwner? pipelineOwner = renderObject.owner;
+
+      // Check if the PipelineOwner is not null
+      if (pipelineOwner != null) {
+        // Get the SemanticsOwner from the PipelineOwner
+        final SemanticsOwner? semanticsOwner = pipelineOwner.semanticsOwner;
+
+        // Check if the SemanticsOwner is not null
+        if (semanticsOwner != null) {
+          // Get the SemanticsNode from the SemanticsOwner using the findChild method
+          // final SemanticsNode? semanticsNode = semanticsOwner.rootSemanticsNode!.findChild(renderObject.semanticId);
+          final SemanticsNode? semanticsNode = semanticsOwner.rootSemanticsNode;
+          print('semanticsNode - accessibility');
+          print(semanticsNode.toString());
+          // Return the SemanticsNode
+          return semanticsNode;
+        }
       }
+    }
+
+    // Return null if the SemanticsNode cannot be obtained
+    return null;
+  }
+
+  static Map<String, dynamic> getAllSemantics(Element element) {
+    // final BuildContext? context = wp!.context;
+    final Map<String, dynamic> accessibility = {};
+    Semantics? semantics;
+
+   element?.visitChildElements((child) {
+      final Widget childWidget = child.widget;
+      if (childWidget is Semantics) {
+        semantics = childWidget;
+        return;
+      }
+    });
+
+    if (semantics != null) {
+      final String? hint = semantics!.properties.hint;
+      final String? label = semantics!.properties.label;
+      accessibility.addAll({
+        'accessibility': {
+          'id': '/NavigatorObserver',
+          'label': label ?? '',
+          'hint': hint ?? ''
+        }
+      });
+    }
+    return accessibility;
+  }
+
+  static Map<String, dynamic> checkForSemantics(WidgetPath? wp) {
+    final BuildContext? context = wp!.context;
+    final Map<String, dynamic> accessibility = {};
+    Semantics? semantics;
+
+    int maxVisit = 10; // TBD: How far up the tree should we look for Semantics?
+
+    context?.visitAncestorElements((ancestor) {
+      final Widget parentWidget = ancestor.widget;
+      if (parentWidget is Semantics) {
+        semantics = parentWidget;
+        return false;
+      }
+      return --maxVisit > 0;
+    });
+
+    if (semantics != null) {
+      final String? hint = semantics!.properties.hint;
+      final String? label = semantics!.properties.label;
+      accessibility.addAll({
+        'accessibility': {
+          'id': '/GestureDetector',
+          'label': label ?? '',
+          'hint': hint ?? ''
+        }
+      });
+    }
+    return accessibility;
+  }
+
+  static String getGestureTarget(WidgetPath wp) {
+    final dynamic widget = wp.context!.widget;
+    String gestureTarget;
+
+    try {
+      gestureTarget = widget.child.runtimeType.toString();
+    } on NoSuchMethodError {
+      gestureTarget = wp.parentWidgetType!;
+    }
+    return gestureTarget;
+  }
+
+  static void gestureHelper({Widget? gesture, String? gestureType}) async {
+    if (gesture == null) {
+      tlLogger.w(
+          'Warning: Gesture is null in gestureHelper, type: ${gestureType ?? "<NONE>"}');
+      return;
+    }
+    final int hashCode = gesture.hashCode;
+
+    if (WidgetPath.containsKey(hashCode)) {
+      final WidgetPath? wp = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wp!.context;
+      final String gestureTarget = getGestureTarget(wp);
+      final Map<String, dynamic> accessibility = checkForSemantics(wp);
+
+      tlLogger.v(
+          '${gestureType!.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+      tlLogger.v('--> Path: ${wp.widgetPath()}, digest: ${wp.widgetDigest()}');
+
+      await PluginTealeaf.onTlGestureEvent(
+          gesture: gestureType,
+          id: wp.widgetPath(),
+          target: gestureTarget,
+          data: accessibility.isNotEmpty ? accessibility : null,
+          layoutParameters: TlBinder.layoutParametersForGestures);
+    } else {
+      tlLogger.v(
+          "ERROR: ${gesture.runtimeType.toString()} gesture not found for hashcode: $hashCode");
     }
   }
 
-  // Return null if the SemanticsNode cannot be obtained
-  return null;
+  static void pointerEventHelper(String action, PointerEvent pe) {
+    final String json = jsonEncode(pe, toEncodable: encodeJsonPointerEvent);
+    final Map<String, dynamic> fields = jsonDecode(json);
+
+    tlLogger.v("My PointerEvent $action TRAP!");
+
+    if (fields.containsKey('timestamp')) {
+      fields['timestamp'] = fields['timestamp'].toString();
+    }
+    fields['action'] = action;
+    PluginTealeaf.onTlPointerEvent(fields: fields);
+  }
+
+  static Map<String, dynamic> errorDetailsHelper(
+      FlutterErrorDetails fed, String type) {
+    final Map<String, dynamic> data = {};
+    final String errorString = fed.exception.runtimeType.toString();
+
+    data["name"] = errorString;
+    data["message"] = fed.toStringShort();
+    data["stacktrace"] = fed.stack.toString();
+    data["handled"] = true;
+
+    tlLogger.v(
+        "!!! Flutter exception, type: $type, class: $errorString, hash: ${fed.exception.hashCode}");
+
+    return data;
+  }
+
+  static Object? encodeJsonPointerEvent(Object? value) {
+    Map<String, dynamic> map = {};
+
+    if (value != null && value is PointerEvent) {
+      final PointerEvent pointerEvent = value;
+
+      map['position'] = {
+        'dx': pointerEvent.position.dx,
+        'dy': pointerEvent.position.dy
+      };
+      map['localPosition'] = {
+        'dx': pointerEvent.localPosition.dx,
+        'dy': pointerEvent.localPosition.dy
+      };
+      map['down'] = pointerEvent.down;
+      map['kind'] = pointerEvent.kind.index;
+      map['buttons'] = pointerEvent.buttons;
+      map['embedderId'] = pointerEvent.embedderId;
+      map['pressure'] = pointerEvent.pressure;
+      map['timestamp'] = pointerEvent.timeStamp.inMicroseconds;
+    }
+
+    return map;
+  }
+
+  static void pinchGestureHelper(
+      {required Widget? gesture,
+      required String onType,
+      Offset? offset,
+      double? scale,
+      Velocity? velocity,
+      int fingers = 0}) async {
+    if (gesture == null) {
+      tlLogger.w('Warning: Gesture is null in pinchGestureHelper');
+      return;
+    }
+    final int hashCode = gesture.hashCode;
+
+    if (WidgetPath.containsKey(hashCode)) {
+      final WidgetPath? wp = WidgetPath.getPath(hashCode);
+      final BuildContext? context = wp!.context;
+      final String gestureTarget = getGestureTarget(wp);
+      final Map<String, dynamic> accessibility = checkForSemantics(wp);
+
+      tlLogger.v(
+          '${onType.toUpperCase()}: Gesture widget, context hash: ${context.hashCode}, widget hash: $hashCode');
+
+      switch (onType) {
+        case _onScaleStart:
+          {
+            final _Pinch pinch = _Pinch();
+            pinch.startPosition = offset!;
+            wp.addParameters(<String, dynamic>{'pinch': pinch});
+            break;
+          }
+        case _onScaleUpdate:
+          {
+            if (wp.parameters.containsKey('pinch')) {
+              final _Pinch pinch = wp.parameters['pinch'];
+              pinch.updatePosition = offset!;
+              pinch.scale = scale!;
+              pinch.fingers = fingers;
+            }
+            break;
+          }
+        case _onScaleEnd:
+          {
+            if (wp.parameters.containsKey('pinch')) {
+              final _Pinch pinch = wp.parameters['pinch'];
+              pinch.fingers = fingers;
+              final String direction = pinch.pinchResult();
+              tlLogger.v(
+                  '--> Pinch, fingers: ${pinch.getMaxFingers}, direction: $direction');
+
+              if (direction.isNotEmpty) {
+                final Offset start = pinch.getStartPosition!;
+                final Offset end = pinch.getUpdatePosition!;
+                wp.parameters.clear();
+                await PluginTealeaf.onTlGestureEvent(
+                    gesture: 'pinch',
+                    id: wp.widgetPath(),
+                    target: gestureTarget,
+                    data: <String, dynamic>{
+                      'pointer1': {'dx': start.dx, 'dy': start.dy},
+                      'pointer2': {'dx': end.dx, 'dy': end.dy},
+                      'direction': direction,
+                      'velocity': {
+                        'dx': velocity?.pixelsPerSecond.dx,
+                        'dy': velocity?.pixelsPerSecond.dy
+                      },
+                      ...accessibility,
+                    },
+                    layoutParameters: TlBinder.layoutParametersForGestures);
+              }
+            }
+            break;
+          }
+        default:
+          break;
+      }
+    } else {
+      tlLogger.v(
+          "ERROR: ${gesture.runtimeType.toString()} not found for hashcode: $hashCode");
+    }
+  }
 }

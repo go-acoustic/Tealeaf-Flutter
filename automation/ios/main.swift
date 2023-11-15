@@ -7,5 +7,5 @@
 
 import Foundation
 import UIKit
-UIApplicationMain (CommandLine.argc, CommandLine.unsafeArgv, NSStringFromClass (TealeafApplication.self),
-          NSStringFromClass(AppDelegate.self))
+// UIApplicationMain (CommandLine.argc, CommandLine.unsafeArgv, NSStringFromClass (TealeafApplication.self),
+//           NSStringFromClass(AppDelegate.self))

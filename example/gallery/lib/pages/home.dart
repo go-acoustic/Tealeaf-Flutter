@@ -391,6 +391,11 @@ class _AnimatedHomePageState extends State<_AnimatedHomePage>
           primary: true,
           restorationId: 'home_list_view',
           children: [
+            Semantics(
+              label: 'Tealeaf test label',
+              hint: 'Tealeaf test hint',
+              child: const Text('Tealeaf Accessibility Label'),
+            ),
             const SizedBox(height: 8),
             Container(
               margin:

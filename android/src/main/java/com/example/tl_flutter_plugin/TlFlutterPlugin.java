@@ -62,6 +62,8 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterEngineCache;
@@ -768,7 +770,9 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     public void onDetachedFromActivity() {
         activityBinding = null;
 
-        Tealeaf.onPause(getActivity(), null);
+        if (getActivity() != null) {
+            Tealeaf.onPause(getActivity(), null);
+        }
     }
 
     @Override
@@ -872,6 +876,16 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                     }
                     // tlScreenviewMessage(args);
                     logScreenViewContextUnLoad(args);
+                    result.success(true);
+                    break;
+                }
+                case "screenview": {
+                    if (args == null) {
+                        result.error(NO_ARGS, "screenview event requires arguments list", getStackTraceAsString());
+                        return;
+                    }
+                     tlScreenviewMessage(args);
+                    logScreenLayout(args);
                     result.success(true);
                     break;
                 }
@@ -1050,17 +1064,19 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         // Checking for 'tlType' parameter in the args
         final String tlType = checkForParameter(args, "tlType");
         // Checking for 'name' parameter in the args, which is supposed to be the logical name of the current page
-        final String logicalPageName = checkForParameter(args, "name");
+        String logicalPageName = checkForParameter(args, "name");
         int delay = 0;
 
         if (((Map)args).size() == 3) {
             delay = checkForParameter(args, "delay");
         }
 
-        // Logging the view of the current screen with ScreenviewType as LOAD
-        Tealeaf.logScreenview(getActivity(), logicalPageName, ScreenviewType.LOAD);
-        // Logging the layout of the current screen
-        Tealeaf.logScreenLayout(getActivity(), logicalPageName, delay < 0 ? 300 : delay, true);
+        if (TextUtils.isEmpty(logicalPageName) || "null".equals(logicalPageName)) {
+            logicalPageName = Tealeaf.getCurrentLogicalPageName();
+        } else {
+            Tealeaf.setCurrentLogicalPageName(logicalPageName);
+        }
+        Tealeaf.resumeTealeaf(getActivity(), logicalPageName);
     }
 
     /**
@@ -1071,9 +1087,13 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
      */
     void logScreenViewContextUnLoad(Object args) throws Exception {
         // Checking for 'name' parameter in the args, which is supposed to be the logical name of the current page
-        final String logicalPageName = checkForParameter(args, "name");
+        String logicalPageName = checkForParameter(args, "name");
         // Checking for 'referrer' parameter in the args, which is supposed to be the source that led the user to this page
         final String referrer = checkForParameter(args, "referrer");
+
+        if (TextUtils.isEmpty(logicalPageName) || "null".equals(logicalPageName)) {
+            logicalPageName = Tealeaf.getCurrentLogicalPageName();
+        }
 
         // Logging the view of the current screen with ScreenviewType as UNLOAD and the referrer
         Tealeaf.logScreenview(getActivity(), logicalPageName, ScreenviewType.UNLOAD, referrer);
@@ -1319,13 +1339,33 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         return ValueUtil.maskValue(page, text);
     }
 
+    public static String processString(String inputString) {
+        // Define a regular expression pattern to capture content within parentheses or the first word.
+        String pattern = "\\(([^)]+)\\)|(\\w+)";
+        Pattern regex = Pattern.compile(pattern);
+        Matcher matcher = regex.matcher(inputString);
+
+        if (matcher.find()) {
+            if (matcher.group(1) != null) {
+                // Content within parentheses found, use it.
+                return matcher.group(1);
+            } else if (matcher.group(2) != null) {
+                // No parentheses found, use the first word.
+                return matcher.group(2);
+            }
+        }
+
+        // If no match is found, return null or an appropriate default value.
+        return null;
+    }
+
     void logGestureEvent(Activity activity, String eventType, Object args, int logLevel) throws Exception {
         if (!EOCore.canPostMessage(logLevel)) {
             return;
         }
 
         final String id = checkForParameter(args, "id");
-        final String targetWidget = checkForParameter(args, "target");
+        String targetWidget = checkForParameter(args, "target");
         final HashMap<String, Object> data = parameter(args, "data");
         final Gesture gesture = new Gesture();
         final boolean isSwipe = eventType.contentEquals("swipe");
@@ -1368,6 +1408,10 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
             final EventInfo eventInfo = new EventInfo();
             eventInfo.setTlEvent(eventType);
+            targetWidget = (processString(targetWidget));
+            eventInfo.setType(targetWidget);
+            eventInfo.setSubType("TODO: FIX IT");
+
             if (motionEvent1.getActionMasked() == 0) {
                 eventInfo.setType("ACTION_DOWN");
             } else if (motionEvent1.getActionMasked() == 1) {
@@ -1440,6 +1484,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                     gesture.setTouches(touches);
                     gestureControl.setId(new PropertyName(id, IdType.XPATH, id, GestureUtil.getInitialZIndex()));
                     gestureControl.setTlType(targetWidget);
+                    gestureControl.setType(targetWidget);
                 }
             }
 

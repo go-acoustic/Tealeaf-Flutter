@@ -666,120 +666,160 @@
     [self getPointerEvent:args];
 }
 
+NSString *processString(NSString *inputString) {
+    NSError *error = nil;
+    
+    // Define a regular expression pattern to capture content within parentheses or the first word.
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\(([^)]+)\\)|(\\w+)" options:0 error:&error];
+    
+    if (!error) {
+        NSTextCheckingResult *match = [regex firstMatchInString:inputString options:0 range:NSMakeRange(0, [inputString length])];
+        if (match) {
+            if ([match rangeAtIndex:1].location != NSNotFound) {
+                // Content within parentheses found, use it.
+                return [inputString substringWithRange:[match rangeAtIndex:1]];
+            } else if ([match rangeAtIndex:2].location != NSNotFound) {
+                // No parentheses found, use the first word.
+                return [inputString substringWithRange:[match rangeAtIndex:2]];
+            }
+        }
+    }
+    
+    // If no match is found, return nil or an appropriate default value.
+    return nil;
+}
+
 - (void) tlGestureEvent: (NSDictionary *) args {
-    NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
-    NSString *wid    = (NSString *) [self checkForParameter:args withKey:@"id"];
-    NSString *target = (NSString *) [self checkForParameter:args withKey:@"target"];
-    BOOL     isSwipe = [tlType isEqualToString:@"swipe"];
-    BOOL     isPinch = [tlType isEqualToString:@"pinch"];
-    
-    CGFloat        vdx = 0, vdy = 0;
-    NSString       *direction = nil;
-    NSMutableArray *pointerEvents = [[NSMutableArray alloc] init];
-
-    NSDictionary *data = (NSDictionary *) args[@"data"];
-    NSDictionary *accessibility = [[NSDictionary alloc] init];
-
-    if (data != (NSDictionary *) [NSNull null]) {
-        accessibility = data[@"accessibility"];
-    }
-
-    if (isPinch || isSwipe) {
-        PointerEvent *pointerEvent1, *pointerEvent2;
-
-        NSDictionary *data = (NSDictionary *) [self checkForParameter:args withKey:@"data"];
-     
-        CGFloat  x1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dx"] floatValue];
-        CGFloat  y1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dy"] floatValue];
-        NSString *ts1 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer1" withSubKey:@"ts"];
+    @try {
+        NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
+        NSString *wid    = (NSString *) [self checkForParameter:args withKey:@"id"];
+        NSString *target = (NSString *) [self checkForParameter:args withKey:@"target"];
+        BOOL     isSwipe = [tlType isEqualToString:@"swipe"];
+        BOOL     isPinch = [tlType isEqualToString:@"pinch"];
         
-        pointerEvent1 = [[PointerEvent alloc] initWith:@"DOWN" andX:x1 andY:y1 andTs:ts1 andDown:0 andPressure:0 andKind:0];
-        
-        CGFloat  x2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dx"] floatValue];
-        CGFloat  y2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dy"] floatValue];
-        NSString *ts2 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer2" withSubKey:@"ts"];
+        CGFloat        vdx = 0, vdy = 0;
+        NSString       *direction = nil;
+        NSMutableArray *pointerEvents = [[NSMutableArray alloc] init];
+
+        NSDictionary *data = (NSDictionary *) args[@"data"];
+        NSDictionary *accessibility = [[NSDictionary alloc] init];
+
+        if (data != (NSDictionary *) [NSNull null]) {
+            accessibility = data[@"accessibility"];
+        }
+
+        if (isPinch || isSwipe) {
+            PointerEvent *pointerEvent1, *pointerEvent2;
+
+            NSDictionary *data = (NSDictionary *) [self checkForParameter:args withKey:@"data"];
+         
+            CGFloat  x1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dx"] floatValue];
+            CGFloat  y1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dy"] floatValue];
+            NSString *ts1 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer1" withSubKey:@"ts"];
             
-        pointerEvent2 = [[PointerEvent alloc] initWith:@"DOWN" andX:x2 andY:y2 andTs:ts2 andDown:0 andPressure:0 andKind:0];
-        
-        vdx       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dx"] floatValue];
-        vdy       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dy"] floatValue];
-        direction = (NSString *)  [self checkForParameter:data withKey:@"direction"];
-        
-        int times = isPinch ? 2 : 1;
-        
-        for (int i = 0; i < times; i++) {
-            [pointerEvents addObject:pointerEvent1];
-            [pointerEvents addObject:pointerEvent2];
+            pointerEvent1 = [[PointerEvent alloc] initWith:@"DOWN" andX:x1 andY:y1 andTs:ts1 andDown:0 andPressure:0 andKind:0];
+            
+            CGFloat  x2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dx"] floatValue];
+            CGFloat  y2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dy"] floatValue];
+            NSString *ts2 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer2" withSubKey:@"ts"];
+                
+            pointerEvent2 = [[PointerEvent alloc] initWith:@"DOWN" andX:x2 andY:y2 andTs:ts2 andDown:0 andPressure:0 andKind:0];
+            
+            vdx       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dx"] floatValue];
+            vdy       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dy"] floatValue];
+            direction = (NSString *)  [self checkForParameter:data withKey:@"direction"];
+            
+            int times = isPinch ? 2 : 1;
+            
+            for (int i = 0; i < times; i++) {
+                [pointerEvents addObject:pointerEvent1];
+                [pointerEvents addObject:pointerEvent2];
+            }
         }
-    }
-    else {
-        [pointerEvents addObject:_lastMotionUpEvent];
-    }
-    
-    NSMutableArray *touches = [[NSMutableArray alloc] init];
-    NSMutableArray *touch   = nil;
-    int touchCount = (int) [pointerEvents count];
-    
-    for (int i = 0; i < touchCount; /* inc at bottom of loop for test */) {
-        PointerEvent *pointerEvent = pointerEvents[i];
-        
-        if (touch == nil) {
-            touch = [[NSMutableArray alloc] init];
+        else {
+            [pointerEvents addObject:_lastMotionUpEvent];
         }
         
-        CGFloat x      = pointerEvent.x * _scale;
-        CGFloat y      = pointerEvent.y * _scale;
-        CGFloat relX   = x / _screenWidth;
-        CGFloat relY   = y / _screenHeight;
-        NSString *xy   = [NSString stringWithFormat:@"%f,%f", relX, relY];
+        NSMutableArray *touches = [[NSMutableArray alloc] init];
+        NSMutableArray *touch   = nil;
+        int touchCount = (int) [pointerEvents count];
 
-        [touch addObject: @{
-            @"position": @{
-                @"x": @(pointerEvent.x),
-                @"y": @(pointerEvent.y)
-            },
-            @"control":  @{
+        for (int i = 0; i < touchCount; /* inc at bottom of loop for test */) {
+            PointerEvent *pointerEvent = pointerEvents[i];
+            
+            if (touch == nil) {
+                touch = [[NSMutableArray alloc] init];
+            }
+            
+            CGFloat x      = pointerEvent.x * _scale;
+            CGFloat y      = pointerEvent.y * _scale;
+            CGFloat relX   = x / _screenWidth;
+            CGFloat relY   = y / _screenHeight;
+            NSString *xy   = [NSString stringWithFormat:@"%f,%f", relX, relY];
+            
+            NSString *type = @"";
+            if (target != nil && target.length > 0) {
+                type = processString(target);
+            }
+
+            [touch addObject: @{
                 @"position": @{
-                    @"height": @(_screenHeight),
-                    @"width":  @(_screenWidth),
-                    @"relXY":  xy,
+                    @"x": @(pointerEvent.x),
+                    @"y": @(pointerEvent.y)
                 },
-                @"id":       wid,
-                @"idType":   @(-4),
-                @"type":     @"FlutterSurfaceView",
-                @"subType":  @"SurfaceView",
-                @"tlType":   target,
-                @"accessibility": accessibility,
-            },
-        }];
-        // After two 'touch' entries, move to next element in touches arrays (for pinch and swipe)
-        i += 1;
-        if ((i % 2) == 0 || i >= touchCount) {
-            [touches addObject:touch];
-            touch = nil;
+                @"control":  @{
+                    @"position": @{
+                        @"height": @(_screenHeight),
+                        @"width":  @(_screenWidth),
+                        @"relXY":  xy,
+                    },
+                    @"id":       wid,
+                    @"idType":   @(-4),
+                    @"type":     type,
+                    @"subType":  @"TODO FIX",
+                    @"tlType":   type,
+                    @"accessibility": (accessibility ?: [NSNull null]),
+                },
+            }];
+            // After two 'touch' entries, move to next element in touches arrays (for pinch and swipe)
+            i += 1;
+            if ((i % 2) == 0 || i >= touchCount) {
+                [touches addObject:touch];
+                touch = nil;
+            }
         }
+        
+        // TODO: Need a screenshot for Gesture, will need optimiztion
+        UIImage *screenshot       = [self takeScreenShot];
+        CGSize screenSize = [UIScreen mainScreen].bounds.size;
+        TlImage *tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
+        NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
+        _lastScreen = base64ImageString;
+        
+        NSMutableDictionary *gestureMessage =[@{
+            @"event": [@{
+                // TBD: Need to check: Should this mimic Android version? Verify correctness for Pinch "type"
+                @"type":    isPinch ? @"onScale" : _lastMotionUpEvent.action,
+                @"tlEvent": tlType
+            } mutableCopy],
+            @"touches": touches,
+            @"base64Representation": _lastScreen
+        } mutableCopy];
+        
+        if (direction != nil) {
+            gestureMessage[@"direction"] = direction;
+            gestureMessage[@"velocityX"] = @(vdx);
+            gestureMessage[@"velocityY"] = @(vdy);
+        }
+        
+        [self tlLogMessage:gestureMessage addType: @11];
+        
+        _lastDown = 0L;
+        _lastMotionUpEvent = _firstMotionEvent = nil;
+    
+    } @catch (NSException *exception) {
+        NSLog(@"An exception occurred: %@", exception);
     }
-    
-    NSMutableDictionary *gestureMessage =[@{
-        @"event": [@{
-            // TBD: Need to check: Should this mimic Android version? Verify correctness for Pinch "type"
-            @"type":    isPinch ? @"onScale" : _lastMotionUpEvent.action,
-            @"tlEvent": tlType
-        } mutableCopy],
-        @"touches": touches,
-        @"base64Representation": _lastScreen
-    } mutableCopy];
-    
-    if (direction != nil) {
-        gestureMessage[@"direction"] = direction;
-        gestureMessage[@"velocityX"] = @(vdx);
-        gestureMessage[@"velocityY"] = @(vdy);
-    }
-    
-    [self tlLogMessage:gestureMessage addType: @11];
-    
-    _lastDown = 0L;
-    _lastMotionUpEvent = _firstMotionEvent = nil;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {

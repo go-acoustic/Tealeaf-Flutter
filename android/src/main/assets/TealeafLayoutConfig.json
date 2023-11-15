@@ -22,6 +22,9 @@
         "MaskIdList": [
         ],
         "MaskValueList": [
+        ],
+        "MaskAccessibilityLabelList": [
+          "Tealeaf Accessibility Label"
         ]
       }
     },

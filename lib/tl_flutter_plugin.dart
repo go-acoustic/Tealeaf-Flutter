@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:tl_flutter_plugin/tl_flutter_plugin_helper.dart';
 
 import 'logger.dart';
 import 'dart:convert';
+import 'package:flutter/rendering.dart';
 
 /// A widget that logs UI change events.
 ///
@@ -13,6 +15,8 @@ import 'dart:convert';
 class Tealeaf extends StatelessWidget {
   /// The child widget to which the [Tealeaf] is applied.
   final Widget child;
+  // final Function(GestureEvent) onGesture;
+  final Widget rootWidget; // Store a reference to the root widget
 
   /// Use as reference time to calculate widget load time
   static int startTime = DateTime.now().millisecondsSinceEpoch;
@@ -26,23 +30,106 @@ class Tealeaf extends StatelessWidget {
   /// Constructs a [Tealeaf] with the given child.
   ///
   /// The [child] parameter is the widget to which the [Tealeaf] is applied.
-  Tealeaf({Key? key, required this.child}) : super(key: key);
+  Tealeaf({Key? key, required this.child})
+      : rootWidget = child,
+        super(key: key);
 
   static void init(bool printLog) {
     startTime = DateTime.now().millisecondsSinceEpoch;
     showDebugLog = printLog;
+
+    /// Handles screen layout data, and Gesture events
+    TlBinder().init();
   }
 
   @override
   Widget build(BuildContext context) {
-    UserInteractionLogger.initialize(); // Initialize the UserInteractionLogger
+    UserInteractionLogger.initialize();
 
-    return Listener(
-      onPointerUp: (details) {
-        // Start time as reference when there's navigation change
-        Tealeaf.startTime = DateTime.now().millisecondsSinceEpoch;
+    Widget? widget = context.widget;
+
+    tlLogger.v(
+        'GestureDetector Build WIDGET: ${widget.runtimeType.toString()} ${widget.hashCode}');
+    final WidgetPath wp = WidgetPath.create(context, hash: true);
+    wp.addInstance(widget.hashCode);
+    wp.addParameters(<String, dynamic>{'type': widget.runtimeType.toString()});
+
+    return NotificationListener(
+      onNotification: (Notification? notification) {
+        if (notification is ScrollStartNotification) {
+          final ScrollStartNotification scrollStartNotification = notification;
+          final DragStartDetails? details = scrollStartNotification.dragDetails;
+          TlBinder()
+              .startScroll(details?.globalPosition, details?.sourceTimeStamp);
+        } else if (notification is ScrollUpdateNotification) {
+          final ScrollUpdateNotification scrollUpdateNotification =
+              notification;
+          final DragUpdateDetails? details =
+              scrollUpdateNotification.dragDetails;
+          TlBinder()
+              .updateScroll(details?.globalPosition, details?.sourceTimeStamp);
+        } else if (notification is ScrollEndNotification) {
+          final ScrollEndNotification scrollEndNotification = notification;
+          final DragEndDetails? details = scrollEndNotification.dragDetails;
+          TlBinder().endScroll(details?.velocity);
+          tlLogger.v('Scroll notification completed');
+        }
+        return false;
       },
-      child: child,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        // onTap: () async {
+        //   final Widget gesture = GestureDetector(
+        //   child: child,
+        //   onTap: params['onTap'],
+        //   // Configure other properties and callbacks as needed
+        //   );
+        //   // debugDumpApp();
+        // },
+        // onTapUp: (TapUpDetails details) async {
+        //   // developer.debug(() {
+        //   // Isolate.spawn(yourCode, null);
+
+        //   var str = findTouchedWidget(context, details.globalPosition);
+        //   final target = details.toString();
+        //   debugPrint('The value of count is $details');
+
+        //   // Handle onTap gesture here
+        //   await PluginTealeaf.onTlGestureEvent(
+        //     gesture: target,
+        //     id: wp.widgetPath(),
+        //     target: target,
+        //     data: null,
+        //     layoutParameters: TlBinder.layoutParametersForGestures);
+        // },
+        child: Listener(
+          onPointerUp: (details) async {
+            // Handle onPointerUp event here
+            // Start time as reference when there's navigation change
+            Tealeaf.startTime = DateTime.now().millisecondsSinceEpoch;
+
+            TealeafHelper.pointerEventHelper("UP", details);
+
+            var touchedTarget = findTouchedWidget(context, details.position);
+            debugPrint('The value of count is $details');
+
+            // Handle onTap gesture here
+            await PluginTealeaf.onTlGestureEvent(
+                gesture: "tap",
+                id: wp.widgetPath(),
+                target: touchedTarget,
+                data: null,
+                layoutParameters: TlBinder.layoutParametersForGestures);
+          },
+          onPointerDown: (details) {
+            TealeafHelper.pointerEventHelper("DOWN", details);
+          },
+          onPointerMove: (details) {
+            TealeafHelper.pointerEventHelper("MOVE", details);
+          },
+          child: child,
+        ),
+      ),
     );
   }
 
@@ -61,6 +148,49 @@ class Tealeaf extends StatelessWidget {
       'handled': false,
       // Add other fields as needed
     };
+  }
+
+  /// Use HitBox test to find touched item on the screen.
+  ///
+  /// Since the results are just a list of RenderObjects, we'll need to parse the Widget info.
+  static String findTouchedWidget(
+      final BuildContext context, final Offset position) {
+    String jsonString = "";
+
+    final RenderObject? renderObject = context.findRenderObject();
+    if (renderObject is RenderBox) {
+      final RenderBox renderBox = renderObject;
+      final Size widgetSize = renderBox.size;
+      print('Widget size: $widgetSize');
+
+      final Offset localOffset = renderBox.globalToLocal(position);
+      print(renderBox);
+
+      // Perform hit-testing
+      final BoxHitTestResult result = BoxHitTestResult();
+      renderBox.hitTest(result, position: localOffset);
+
+      // Analyze the hit result to find the widget that was touched.
+      for (HitTestEntry entry in result.path) {
+        if (entry is! BoxHitTestEntry || entry is SliverHitTestEntry) {
+          final targetWidget = entry.target;
+          print('Touched Widget: $targetWidget');
+          print('Touched entry: $entry');
+          print('Runtime type: $targetWidget');
+
+          final widgetString = targetWidget.toString();
+          jsonString = jsonEncode(widgetString);
+
+          // Check for a specific container type
+          if (targetWidget.runtimeType == Container) {
+            print('Touched a Container');
+          }
+
+          break;
+        }
+      }
+    }
+    return jsonString == "" ? "FlutterSurfaceView" : jsonString;
   }
 }
 
@@ -93,6 +223,10 @@ class LoggingNavigatorObserver extends NavigatorObserver {
       );
     });
 
+    // final WidgetPath wp = WidgetPath.create(context, hash: true);
+    // wp.addInstance(widget.hashCode);
+    // wp.addParameters(<String, dynamic>{'type': widget.runtimeType.toString()});
+
     PluginTealeaf.logScreenLayout('LOAD', route.settings.name.toString());
     _logWidgetTree();
 
@@ -123,21 +257,49 @@ void _logWidgetTree() {
     // ignore: deprecated_member_use
     final element = WidgetsBinding.instance.renderViewElement;
     if (element != null) {
+      /// TODO:  Get all accessibility props.
+      // final AccessibleNodeList = TealeafHelper.getAllSemantics(element);
+
       _parseWidgetTree(element);
     }
   });
 }
 
+/// Parses the Flutter widget tree and returns a list of widget data maps.
+///
+/// [element]: The root element of the widget tree to parse.
 List<Map<String, dynamic>> _parseWidgetTree(Element element) {
   final widgetTree = <Map<String, dynamic>>[];
+  final List<Map<String, dynamic>> accessibilityList = [];
 
   // Recursively parse the widget tree
   void traverse(Element element, [int depth = 0]) {
     final widget = element.widget;
     final type = widget.runtimeType.toString();
 
+    if (widget is Semantics) {
+      final Semantics semantics = widget as Semantics;
+
+      if (semantics.properties.label?.isNotEmpty == true || semantics.properties.label?.isNotEmpty == true) {
+        final String? hint = semantics!.properties.hint;
+        final String? label = semantics!.properties.label;
+
+        final Map<String, dynamic> accessibility = {};
+        accessibility.addAll({
+          'accessibility': {
+            'id': '/NavigatorObserver',
+            'label': label ?? '',
+            'hint': hint ?? ''
+          }
+        });
+
+        accessibilityList.add(accessibility);
+
+        print('Tealeaf - Widget is a semantic type: ${semantics.properties}');
+      }
+    }
     // For accessibility
-    //getSemanticsNode(element);
+    // TealeafHelper.checkForSemantics(element);
 
     if (widget is Text ||
         widget is ElevatedButton ||
@@ -301,6 +463,16 @@ class PluginTealeaf {
     }
   }
 
+  /// Records network connection metrics for a specific URL.
+  ///
+  /// [url]: The URL of the network connection.
+  /// [statusCode]: The HTTP status code of the network response.
+  /// [description]: Optional description of the network connection.
+  /// [responseSize]: Optional size of the network response data, in bytes.
+  /// [initTime]: Optional time at which the network request was initiated.
+  /// [loadTime]: Optional time at which the network response was received.
+  /// [responseTime]: Optional time it took to receive the network response,
+  ///   calculated as `loadTime - initTime` if not provided.
   static Future<void> tlConnection(
       {required String url,
       required int statusCode,
@@ -327,6 +499,11 @@ class PluginTealeaf {
     }
   }
 
+  /// Sends a custom event to the TeaLeaf platform.
+  ///
+  /// [eventName]: The name of the custom event.
+  /// [customData]: Optional custom data associated with the event.
+  /// [logLevel]: Optional log level for the event, where 0 is the lowest and 7 is the highest.
   static Future<void> tlApplicationCustomEvent(
       {required String? eventName,
       Map<String, String?>? customData,
@@ -395,6 +572,15 @@ class PluginTealeaf {
     }
   }
 
+  /// Handles incoming gesture events from the Flutter engine.
+  ///
+  /// [gesture]: The type of gesture, e.g., 'pinch', 'swipe', 'taphold', 'doubletap', or 'tap'.
+  /// [id]: The unique identifier of the gesture event.
+  /// [target]: The target of the gesture event, e.g., a widget ID.
+  /// [data]: Additional data associated with the gesture event, if any.
+  /// [layoutParameters]: Layout parameters associated with the gesture event, if any.
+  ///
+  /// Throws a [TealeafException] if the gesture type is not supported or if there is an error processing the gesture message.
   static Future<void> onTlGestureEvent(
       {required String? gesture,
       required String id,
@@ -544,31 +730,6 @@ class UserInteractionLogger {
     _setupPerformanceLogging();
   }
 
-  // static void _setupGestureLogging() {
-  //   // Enable gesture logging
-  //   GestureBinding.instance.pointerRouter.addGlobalRoute((PointerEvent event) {
-  //     _channel.invokeMethod('logGesture', <String, dynamic>{
-  //       'timestamp': DateTime.now().millisecondsSinceEpoch,
-  //       'event': describeEnum(event.runtimeType),
-  //       // Add additional properties based on the event type if needed
-  //     });
-  //   });
-  // }
-
-  // static void _setupNavigationLogging() {
-  // Enable navigation change logging
-  // final RouteObserver<PageRoute<dynamic>> routeObserver =
-  //     RouteObserver<PageRoute<dynamic>>();
-  // Navigator.observer = routeObserver;
-  // routeObserver.subscribe(null, (Route<dynamic> route, Route<dynamic>? previousRoute) {
-  //   _channel.invokeMethod('logNavigationChange', <String, dynamic>{
-  //     'timestamp': DateTime.now().millisecondsSinceEpoch,
-  //     'from': previousRoute?.settings.name,
-  //     'to': route.settings.name,
-  //   });
-  // } as PageRoute);
-  // }
-
   static void _setupPerformanceLogging() {
     // Enable performance metric logging
     WidgetsBinding.instance.addObserver(PerformanceObserver());
@@ -611,30 +772,23 @@ class PerformanceObserver extends WidgetsBindingObserver {
     super.didHaveMemoryPressure();
   }
 
-  // @override
-  // void didChangeMetrics() {
-  //   final startTime = DateTime.now().millisecondsSinceEpoch;
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     // This callback will be executed after the frame is rendered.
-  //     final endTime = DateTime.now().millisecondsSinceEpoch;
-  //     final duration = endTime - startTime;
-  //     print("Frame rendering duration: ${duration}ms");
-
-  //     PluginTealeaf.tlApplicationCustomEvent(
-  //       eventName: 'Performance Metric',
-  //       customData: {
-  //         'didChangeMetrics': 'UI changes such as rotation.',
-  //         'Load Time': duration.toString(),
-  //       },
-  //       logLevel: 1,
-  //     );
-  //   });
-
-  //   super.didChangeMetrics();
-  // }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _performanceCustomEvent(state);
+  }
+}
+
+class SemanticsFinder extends WidgetsBindingObserver {
+  List<SemanticsNode> semanticsNodes = [];
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    var tree = RendererBinding
+        .instance.pipelineOwner.semanticsOwner?.rootSemanticsNode;
+
+    tree?.visitChildren((SemanticsNode node) {
+      semanticsNodes?.add(node);
+      return true;
+    });
   }
 }

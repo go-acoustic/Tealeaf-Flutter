@@ -43,17 +43,15 @@ void main() async {
       return true;
     };
   }
-  
+
   // Init Tealeaf plugin, show/hide print log
   Tealeaf.init(true);
 
   ///
   /// Add Tealeaf Wrapper for auto instrumentation
-  /// 
-  runApp(Tealeaf(
-    child: const GalleryApp()));
+  ///
+  runApp(Tealeaf(child: const GalleryApp()));
 }
-
 
 class GalleryApp extends StatelessWidget {
   const GalleryApp({
@@ -84,8 +82,9 @@ class GalleryApp extends StatelessWidget {
           return MaterialApp(
             ///
             /// Add the required Tealeaf loggingNavigatorObserver to the navigatorObservers list
-            /// 
+            ///
             navigatorObservers: [Tealeaf.loggingNavigatorObserver],
+            // showSemanticsDebugger: true,
 
             restorationScopeId: 'rootGallery',
             title: 'Flutter Gallery',

@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/gallery_localizations.dart';
 import 'package:gallery/demos/material/material_demo_types.dart';
+import 'package:tl_flutter_plugin/tl_http_client.dart';
 
 class ButtonDemo extends StatelessWidget {
   const ButtonDemo({super.key, required this.type});
@@ -284,7 +285,7 @@ class _FloatingActionButtonDemo extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FloatingActionButton(
-            onPressed: () {},
+            onPressed: () {fetchData();},
             tooltip: localizations.buttonTextCreate,
             child: const Icon(Icons.add),
           ),
@@ -297,6 +298,21 @@ class _FloatingActionButtonDemo extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<String> fetchData() async {
+    var client = TlHttpClient();
+    var url = Uri.parse('https://www.google.com/');
+    final response =
+        await client.get(url);
+
+    if (response.statusCode == 200) {
+      // If server returns an OK response
+      return  'Success';
+    } else {
+      // If that response was not OK
+      return 'Failed to load page';
+    }
   }
 }
 

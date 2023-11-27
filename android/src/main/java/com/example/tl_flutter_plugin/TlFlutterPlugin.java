@@ -27,6 +27,7 @@ import com.tl.uic.TLFCache;
 import com.tl.uic.Tealeaf;
 import com.tl.uic.TealeafEOLifecycleObject;
 import com.tl.uic.model.BaseTarget;
+import com.tl.uic.model.Connection;
 import com.tl.uic.model.EventInfo;
 import com.tl.uic.model.Gesture;
 import com.tl.uic.model.GestureControl;
@@ -956,12 +957,15 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         final long responseSize = Long.parseLong(checkForParameter(args, "responseDataSize"));
         final long initTime = Long.parseLong(checkForParameter(args, "initTime"));
         final long loadTime = Long.parseLong(checkForParameter(args, "loadTime"));
-        // final Long responseTime = Long.valueOf(checkForParameter(args, "responseTime"));
-        Integer logLevel = parameter(args, "loglevel");
 
-        if (logLevel == null) logLevel = EOCore.getDefaultLogLevel();
-
-//    Tealeaf.logConnection(url, initTime, loadTime, responseSize, statusCode, logLevel);
+        final Connection connection = new Connection();
+        connection.setUrl(url);
+        connection.setInitTime(initTime);
+        connection.setLoadTime(loadTime);
+        connection.setResponseDataSize(responseSize);
+        connection.setStatusCode(statusCode);
+        
+        Tealeaf.logConnection(connection);
     }
 
     void tlCustomEventMessage(Object args) throws Exception {

@@ -78,30 +78,6 @@ class Tealeaf extends StatelessWidget {
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        // onTap: () async {
-        //   final Widget gesture = GestureDetector(
-        //   child: child,
-        //   onTap: params['onTap'],
-        //   // Configure other properties and callbacks as needed
-        //   );
-        //   // debugDumpApp();
-        // },
-        // onTapUp: (TapUpDetails details) async {
-        //   // developer.debug(() {
-        //   // Isolate.spawn(yourCode, null);
-
-        //   var str = findTouchedWidget(context, details.globalPosition);
-        //   final target = details.toString();
-        //   debugPrint('The value of count is $details');
-
-        //   // Handle onTap gesture here
-        //   await PluginTealeaf.onTlGestureEvent(
-        //     gesture: target,
-        //     id: wp.widgetPath(),
-        //     target: target,
-        //     data: null,
-        //     layoutParameters: TlBinder.layoutParametersForGestures);
-        // },
         child: Listener(
           onPointerUp: (details) async {
             // Handle onPointerUp event here
@@ -223,12 +199,19 @@ class LoggingNavigatorObserver extends NavigatorObserver {
       );
     });
 
-    // final WidgetPath wp = WidgetPath.create(context, hash: true);
-    // wp.addInstance(widget.hashCode);
-    // wp.addParameters(<String, dynamic>{'type': widget.runtimeType.toString()});
+    // PluginTealeaf.logScreenLayout('LOAD', route.settings.name.toString());
+    // final Duration startTimestamp = Duration();
 
-    PluginTealeaf.logScreenLayout('LOAD', route.settings.name.toString());
-    _logWidgetTree();
+    //  final Duration timestamp = Duration(milliseconds: waitTime);
+
+    _logWidgetTree().then((result) {
+      // Handle the result here
+      print(result);
+      PluginTealeaf.onScreenview("LOAD", Duration(milliseconds: 300), result);
+    }).catchError((error) {
+      // Handle errors if the async function throws an error
+      print('Error: $error');
+    });
 
     tlLogger.v('PluginTealeaf.logScreenLayout - Pushed ${route.settings.name}');
   }
@@ -250,112 +233,268 @@ class LoggingNavigatorObserver extends NavigatorObserver {
 ///
 /// Log tree from current screen frame.
 ///
-void _logWidgetTree() {
-  WidgetsBinding.instance.addPostFrameCallback((_) {
+Future<List<Map<String, dynamic>>> _logWidgetTree() async {
+  final completer = Completer<List<Map<String, dynamic>>>();
+
+  WidgetsBinding.instance!.addPostFrameCallback((_) {
     WidgetsFlutterBinding.ensureInitialized();
 
     // ignore: deprecated_member_use
-    final element = WidgetsBinding.instance.renderViewElement;
+    final element = WidgetsBinding.instance!.renderViewElement;
     if (element != null) {
-      /// TODO:  Get all accessibility props.
-      // final AccessibleNodeList = TealeafHelper.getAllSemantics(element);
-
-      _parseWidgetTree(element);
+        // Future.delayed(Duration(seconds: 2), () {
+          completer.complete(_parseWidgetTree(element));
+        // });
+    } else {
+      completer.completeError('Failed to retrieve the render view element');
     }
   });
+
+  return completer.future;
 }
 
 /// Parses the Flutter widget tree and returns a list of widget data maps.
 ///
 /// [element]: The root element of the widget tree to parse.
-List<Map<String, dynamic>> _parseWidgetTree(Element element) {
+Future<List<Map<String, dynamic>>> _parseWidgetTree(Element element) async {
   final widgetTree = <Map<String, dynamic>>[];
-  final List<Map<String, dynamic>> accessibilityList = [];
+  final List<AccessiblePosition?> accessiblePositionList = [];
+  AccessiblePosition? accessibility;
 
-  // Recursively parse the widget tree
-  void traverse(Element element, [int depth = 0]) {
-    final widget = element.widget;
-    final type = widget.runtimeType.toString();
+  /// All controls excluding the type 10 root node
+  final List<Map<String, dynamic>> allControlsList = [];
 
-    if (widget is Semantics) {
-      final Semantics semantics = widget as Semantics;
+  Element parentElement;
+  
+  try {
+    // await Future.delayed(Duration.zero);
 
-      if (semantics.properties.label?.isNotEmpty == true || semantics.properties.label?.isNotEmpty == true) {
-        final String? hint = semantics!.properties.hint;
-        final String? label = semantics!.properties.label;
+    // Set<Type> commonLayoutWidgets = {
+    //   Row,
+    //   Column,
+    //   Stack,
+    //   Expanded,
+    //   Padding,
+    //   List,
+    //   ListView,
+    //   Transform,
+    //   Clip,
+    //   GridView,
+    //   Card,
+    //   DecoratedBox,
+    //   Container,
+    //   SingleChildScrollView,
+    //   SliverLayoutBuilder,
+    //   AnimatedContainer,
+    //   LimitedBox,
+    // };
 
-        final Map<String, dynamic> accessibility = {};
-        accessibility.addAll({
-          'accessibility': {
-            'id': '/NavigatorObserver',
-            'label': label ?? '',
-            'hint': hint ?? ''
+    // Recursively parse the widget tree
+    void traverse(Element element, [int depth = 0]) {
+      final widget = element.widget;
+      final type = widget.runtimeType.toString();
+
+      /// Build type 10 object
+      if (widget is Semantics ||
+          widget is Text ||
+          widget is ElevatedButton ||
+          widget is TextFormField ||
+          widget is TextField ||
+          widget is Checkbox ||
+          widget is CheckboxListTile ||
+          widget is Switch ||
+          widget is SwitchListTile ||
+          widget is Slider ||
+          widget is Radio ||
+          widget is RadioListTile ||
+          widget is DropdownButton ||
+          widget is DropdownMenuItem ||
+          widget is AlertDialog ||
+          widget is SnackBar ||
+          widget is Image ||
+          widget is Icon) {
+        final renderObject = element.renderObject as RenderBox;
+        final position = renderObject.localToGlobal(Offset.zero);
+        final size = renderObject.size;
+
+        Map<String, dynamic>? aStyle;
+        Map<String, dynamic>? font;
+        Map<String, dynamic>? image;
+        String? text = "";
+
+        if (widget is Text) {
+          final TextStyle style = widget.style ?? TextStyle();
+          final TextAlign align = widget.textAlign ?? TextAlign.left;
+
+          Widget currentWidget = widget;
+          Padding padding;
+
+          font = {
+            'family': style.fontFamily,
+            'size': style.fontSize.toString(),
+            'bold': (style.fontWeight != null &&
+                    FontWeight.values.indexOf(style.fontWeight!) >
+                        FontWeight.values.indexOf(FontWeight.normal))
+                .toString(),
+            'italic': (style.fontStyle == FontStyle.italic).toString()
+          };
+
+          double top = 0, bottom = 0, left = 0, right = 0;
+
+          /// Get Padding
+          element.visitAncestorElements((ancestor) {
+            currentWidget = ancestor.widget;
+            if (currentWidget is Padding) {
+              padding = currentWidget as Padding;
+              print('Padding: $padding');
+
+              if (padding.padding is EdgeInsets) {
+                final EdgeInsets eig = padding.padding as EdgeInsets;
+                top = eig.top;
+                bottom = eig.bottom;
+                left = eig.left;
+                right = eig.right;
+              }
+              return false;
+            }
+            return true;
+          });
+
+          aStyle = {
+            'textColor': ((style.color?.value ?? 0) & 0xFFFFFF).toString(),
+            'textAlphaColor': (style.color?.alpha ?? 0).toString(),
+            'textAlphaBGColor': (style.backgroundColor?.alpha ?? 0).toString(),
+            'textAlign': align.toString().split('.').last,
+            'paddingBottom': bottom.toInt().toString(),
+            'paddingTop': top.toInt().toString(),
+            'paddingLeft': left.toInt().toString(),
+            'paddingRight': right.toInt().toString(),
+            'hidden': (style.color?.opacity == 1.0).toString(),
+            'colorPrimary': (style.foreground?.color ?? 0).toString(),
+            'colorPrimaryDark': 0.toString(), // TBD: Dark theme??
+            'colorAccent': (style.decorationColor?.value ?? 0).toString(),
+          };
+        }
+
+        /// Get Semantics
+        if (widget is Semantics) {
+          final Semantics semantics = widget;
+
+          if (semantics.properties.label?.isNotEmpty == true ||
+              semantics.properties.label?.isNotEmpty == true) {
+            final String? hint = semantics.properties.hint;
+            final String? label = semantics.properties.label;
+
+            print(
+                'Tealeaf - Widget is a semantic type: ${semantics.properties}');
+
+            /// Get Accessibility object, and its position for masking purpose
+            accessibility = AccessiblePosition(
+              id: element.toStringShort(),
+              label: label ?? '',
+              hint: hint ?? '',
+              dx: position.dx,
+              dy: position.dy,
+              width: size.width,
+              height: size.height,
+            );
+            accessiblePositionList.add(accessibility);
           }
-        });
+        } else {
+          text = widget is Text ? widget.data : '';
+          final widgetData = {
+            'type': type,
+            'text': text,
+            'position': 'x: ${position.dx}, y: ${position.dy}, width: ${size?.width}, height: ${size?.height}'
+          ,
+          };
 
-        accessibilityList.add(accessibility);
+          // tlLogger.v('WidgetData - ${widget.toString()}');
 
-        print('Tealeaf - Widget is a semantic type: ${semantics.properties}');
+          widgetTree.add(widgetData);
+
+          final masked = false;
+          final widgetId =
+              widget.runtimeType.toString() + widget.hashCode.toString();
+          AccessiblePosition? deepCopiedAccessibility;
+
+          if (accessibility != null) {
+            deepCopiedAccessibility = AccessiblePosition(
+                id: accessibility?.id,
+                label: accessibility?.label,
+                hint: accessibility?.hint,
+                dx: accessibility?.dx ?? 0.0,
+                dy: accessibility?.dy ?? 0.0,
+                width: accessibility?.width ?? 0.0,
+                height: accessibility?.height ?? 0.0);
+
+            accessibility = null;
+          }
+
+          /// Add the control as map to the list
+          allControlsList.add(<String, dynamic>{
+            'id': widgetId,
+            'cssId': widgetId,
+            'idType': (-4).toString(),
+            'tlType': (image != null)
+                ? 'image'
+                : (text != null && text.contains('\n') ? 'textArea' : 'label'),
+            'type': type,
+            'subType': widget.runtimeType.toString(),
+            'position': <String, String>{
+              'x': position.dx.toInt().toString(),
+              'y': position.dy.toInt().toString(),
+              'width': renderObject.size.width.toInt().toString(),
+              'height': renderObject.size.height.toInt().toString(),
+            },
+            'zIndex': "501",
+            'currState': <String, dynamic>{'text': text, 'font': font},
+            if (aStyle != null) 'style': aStyle,
+            // if (deepCopiedAccessibility != null) 'accessibility': deepCopiedAccessibility,
+            'originalId': "",
+            'masked': '$masked'
+          });
+        }
       }
-    }
-    // For accessibility
-    // TealeafHelper.checkForSemantics(element);
 
-    if (widget is Text ||
-        widget is ElevatedButton ||
-        widget is TextFormField ||
-        widget is TextField ||
-        widget is Checkbox ||
-        widget is CheckboxListTile ||
-        widget is Switch ||
-        widget is SwitchListTile ||
-        widget is Slider ||
-        widget is Radio ||
-        widget is RadioListTile ||
-        widget is DropdownButton ||
-        widget is DropdownMenuItem ||
-        widget is ListView ||
-        widget is GridView ||
-        widget is Card ||
-        widget is AppBar ||
-        widget is BottomNavigationBar ||
-        widget is Drawer ||
-        widget is AlertDialog ||
-        widget is SnackBar ||
-        widget is Image ||
-        widget is Icon) {
-      final renderObject = element.renderObject as RenderBox?;
-      final position = renderObject?.localToGlobal(Offset.zero);
-      final size = renderObject?.size;
+      /// Recursively call to wall down the tree, only Visible children
+      element.visitChildren((child) {
+        bool visible = true;
+        if (widget is Visibility) {
+          final visibility = widget;
+          if (!visibility.visible) {
+            visible = false;
+          }
+        }
+        if (visible) {
+          // if (commonLayoutWidgets.contains(widget.runtimeType)) {
+          //   print('The widget is a common layout widget ${widget.runtimeType}.');
+          // }
+          parentElement = element;
+          print('Parent widget - $parentElement.');
 
-      final widgetData = {
-        'type': type,
-        'text': widget is Text ? widget.data : "",
-        'position': position != null
-            ? 'x: ${position.dx}, y: ${position.dy}, width: ${size?.width}, height: ${size?.height}'
-            : "",
-      };
+          traverse(child, depth + 1);
+        }
 
-      tlLogger.v('WidgetData - ${widget.toString()}');
-
-      widgetTree.add(widgetData);
+        return;
+      });
     }
 
-    element.visitChildren((child) {
-      traverse(child, depth + 1);
-      return;
-    });
+    /// Starting to parse tree
+    traverse(element, 0);
+
+    // print (accessiblePositionList.toString());
+    tlLogger.v('AccessiblePositionList - ${accessiblePositionList.toString()}');
+
+    // Encode the JSON object
+    String jsonString = jsonEncode(widgetTree);
+
+    PluginTealeaf.tlApplicationCustomEvent(eventName: jsonString);
+  } catch (error) {
+    // Handle errors using try-catch block
+    print('Error caught in try-catch: $error');
   }
-
-  // Starting to parse tree
-  traverse(element, 0);
-
-  // Encode the JSON object
-  String jsonString = jsonEncode(widgetTree);
-
-  PluginTealeaf.tlApplicationCustomEvent(eventName: jsonString);
-
-  return widgetTree;
+  return allControlsList;
 }
 
 ///
@@ -594,7 +733,7 @@ class PluginTealeaf {
           'id': id,
           'target': target,
           'data': data,
-          'layoutParameters': layoutParameters
+          'layoutParameters': layoutParameters ?? <Map<String, dynamic>>[]
         });
       }
       throw TealeafException.create(
@@ -667,7 +806,7 @@ class PluginTealeaf {
       if (["LOAD", "UNLOAD", "VISIT"].contains(tlType)) {
         final String timeString = timestamp.inMicroseconds.toString();
 
-        // Send the screen view event to the native side
+        // Send the screen view event to -the native side
         return await _channel.invokeMethod('screenview', <dynamic, dynamic>{
           'tlType': tlType,
           'timeStamp': timeString,
@@ -787,7 +926,7 @@ class SemanticsFinder extends WidgetsBindingObserver {
         .instance.pipelineOwner.semanticsOwner?.rootSemanticsNode;
 
     tree?.visitChildren((SemanticsNode node) {
-      semanticsNodes?.add(node);
+      semanticsNodes.add(node);
       return true;
     });
   }

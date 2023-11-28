@@ -448,7 +448,7 @@ class ScreenUtil {
             try {
                 saveScreenImage(currentName, imageBytes);
 
-                if (!TextUtils.isEmpty(currentLayoutName)) {
+                if (!TextUtils.isEmpty(Tealeaf.getCurrentLogicalPageName())) {
                     layout.setName(currentLayoutName);
                 } else {
                     layout.setName(className);
@@ -875,7 +875,6 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                         result.error(NO_ARGS, "logscreenviewcontextunload event requires arguments list", getStackTraceAsString());
                         return;
                     }
-                    // tlScreenviewMessage(args);
                     logScreenViewContextUnLoad(args);
                     result.success(true);
                     break;
@@ -886,7 +885,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                         return;
                     }
                      tlScreenviewMessage(args);
-                    logScreenLayout(args);
+//                    logScreenLayout(args);
                     result.success(true);
                     break;
                 }
@@ -895,7 +894,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                         result.error(NO_ARGS, "screenview event requires arguments list", getStackTraceAsString());
                         return;
                     }
-                    // tlScreenviewMessage(args);
+//                     tlScreenviewMessage(args);
                     logScreenLayout(args);
                     result.success(true);
                     break;
@@ -1000,22 +999,22 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
     void tlGestureMessage(Object args) throws Exception {
         final String tlType = checkForParameter(args, "tlType");
-        //final List<HashMap<String, Object>> widgetLayouts = checkForParameter(args, "layoutParameters");
+        final List<HashMap<String, Object>> widgetLayouts = checkForParameter(args, "layoutParameters");
 
         LOGGER.log(Level.INFO, "Tealeaf message gesture event: " + "tlType: " + tlType + ", page: " +
                 this.lastPage + ", last pointer event was up event: " + (lastPointerEvent == lastPointerUpEvent));
 
-    /* Keep in case we need to take snapshot
-    final List<Position> maskedPositions = new ArrayList<>();
+        /* Keep in case we need to take snapshot */
+        final List<Position> maskedPositions = new ArrayList<>();
 
-    for (HashMap<String, Object> wLayout : widgetLayouts) {
-      final Position position = ScreenUtil.getPositionFromLayout(wLayout);
+        for (HashMap<String, Object> wLayout : widgetLayouts) {
+            final Position position = ScreenUtil.getPositionFromLayout(wLayout);
 
-      if (position.getLabel() != null) {
-        maskedPositions.add(position);
-      }
-    }
-    */
+            if (position.getLabel() != null) {
+                maskedPositions.add(position);
+            }
+        }
+
         if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
             final Activity activity = getActivity();
 
@@ -1071,7 +1070,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         String logicalPageName = checkForParameter(args, "name");
         int delay = 0;
 
-        if (((Map)args).size() == 3) {
+        if (((Map)args).size() == 3 && ((Map<?, ?>) args).get("delay") != null) {
             delay = checkForParameter(args, "delay");
         }
 
@@ -1146,7 +1145,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
         if (current != null) {
             final String pageName = current.getLogicalPageName();
-            final String currentName = new Md5(nextImageBytes).asString();
+            final String currentName = Tealeaf.getCurrentLogicalPageName();
 
             LOGGER.log(Level.INFO, "Current page (Md5): " + pageName +
                     ", next MD5: " + currentName + ", final image size: " + nextImageBytes.length);
@@ -1160,7 +1159,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
             Tealeaf.logScreenview(activity, currentName, ScreenviewType.LOAD, lastPage);
             ScreenUtil.logLayout(activity, currentName, layout, nextImageBytes);
 
-            TLFCache.flush(true); //TBD: remove (force flush for now for debugging)
+//            TLFCache.flush(true); //TBD: remove (force flush for now for debugging)
 
             lastPage = currentName;
             lastPageImage = layout.getBackgroundImage();
@@ -1233,16 +1232,28 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         return sb.toString();
     }
 
-    protected static <T> T checkForParameter(Object args, String key) throws Exception {
-        LOGGER.log(Level.INFO, "Checking for parameter: " + key);
+    /**
+     * Flutter Parameters passed via MethodChannel
+     *
+     * @param args
+     * @param key
+     * @return
+     * @param <T>
+     */
+    protected static <T> T checkForParameter(Object args, String key) {
+        T value = null;
 
-        final T value = parameter(args, key);
+        try {
+            LOGGER.log(Level.INFO, "Checking for parameter: " + key);
 
-        if (value == null) {
-            LOGGER.log(Level.INFO, "Parameter: " + key + " not found in: " + (args == null ? "<args is null>" : args.toString()));
-            throw new Exception(key + " parameter not found!");
+            value = parameter(args, key);
+
+            if (value == null) {
+                LOGGER.log(Level.INFO, "Parameter: " + key + " not found in: " + (args == null ? "<args is null>" : args.toString()));
+            }
+        } catch (Exception e) {
+            LogInternal.logException("TlFlutterPlugin: checkForParameter", e);
         }
-
         return value;
     }
 

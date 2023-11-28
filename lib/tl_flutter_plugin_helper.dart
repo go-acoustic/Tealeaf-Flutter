@@ -419,6 +419,7 @@ class TlBinder extends WidgetsBindingObserver {
     final int waitTime =
         (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
 
+    /// Inline function
     void performScreenview() async {
       loggingScreen = true;
       logFrameTimer = null;
@@ -439,13 +440,13 @@ class TlBinder extends WidgetsBindingObserver {
 
     if (lastFrameTime == 0) {
       tlLogger.v('Logging first frame');
-      performScreenview();
+      // performScreenview();
     } else if (skippingFrame) {
       tlLogger.v('Logging screenview in process, skipping frame');
     } else {
       tlLogger.v("Logging screenview, wait: $waitTime");
-      logFrameTimer =
-          Timer(Duration(milliseconds: waitTime), performScreenview);
+      // logFrameTimer =
+      //     Timer(Duration(milliseconds: waitTime), performScreenview);
     }
     lastFrameTime = currentTime;
   }
@@ -829,6 +830,44 @@ class _Swipe {
   }
 }
 
+/// Represents an accessible position with information about its ID, label, hint, and position coordinates.
+/// 
+class AccessiblePosition {
+  final double dx;
+  final double dy;
+  final double width;
+  final double height;
+  final String? id;
+  final String? label;
+  final String? hint;
+
+  /// Creates a new instance of `AccessiblePosition` with the specified parameters.
+  AccessiblePosition({
+    required this.dx,
+    required this.dy,
+    required this.width,
+    required this.height,
+    this.id,
+    this.label,
+    this.hint,
+  });
+
+  /// Converts the `AccessiblePosition` instance to a map representation.
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'label': label,
+      'hint': hint,
+      'position': {
+        'x': dx,
+        'y': dy,
+        'width': width,
+        'height': height,
+      },
+    };
+  }
+}
+
 ///
 /// Tealeaf static helper methods
 ///
@@ -851,63 +890,7 @@ class TealeafHelper {
   // static const String _onHorizontalDragStart = "onHorizontalDragStart";
   // static const String _onHorizontalDragUpdate = "onHorizontalDragUpdate";
   // static const String _onHorizontalDragEnd = "onHorizontalDragEnd";
-  static SemanticsNode? getSemanticsNode(BuildContext context) {
-    // Get the RenderObject from the BuildContext
-    final RenderObject? renderObject = context.findRenderObject();
 
-    // Check if the RenderObject is a RenderObjectWithChildMixin
-    if (renderObject is RenderObjectWithChildMixin) {
-      // Get the PipelineOwner from the RenderObject
-      final PipelineOwner? pipelineOwner = renderObject.owner;
-
-      // Check if the PipelineOwner is not null
-      if (pipelineOwner != null) {
-        // Get the SemanticsOwner from the PipelineOwner
-        final SemanticsOwner? semanticsOwner = pipelineOwner.semanticsOwner;
-
-        // Check if the SemanticsOwner is not null
-        if (semanticsOwner != null) {
-          // Get the SemanticsNode from the SemanticsOwner using the findChild method
-          // final SemanticsNode? semanticsNode = semanticsOwner.rootSemanticsNode!.findChild(renderObject.semanticId);
-          final SemanticsNode? semanticsNode = semanticsOwner.rootSemanticsNode;
-          print('semanticsNode - accessibility');
-          print(semanticsNode.toString());
-          // Return the SemanticsNode
-          return semanticsNode;
-        }
-      }
-    }
-
-    // Return null if the SemanticsNode cannot be obtained
-    return null;
-  }
-
-  static Map<String, dynamic> getAllSemantics(Element element) {
-    // final BuildContext? context = wp!.context;
-    final Map<String, dynamic> accessibility = {};
-    Semantics? semantics;
-
-   element?.visitChildElements((child) {
-      final Widget childWidget = child.widget;
-      if (childWidget is Semantics) {
-        semantics = childWidget;
-        return;
-      }
-    });
-
-    if (semantics != null) {
-      final String? hint = semantics!.properties.hint;
-      final String? label = semantics!.properties.label;
-      accessibility.addAll({
-        'accessibility': {
-          'id': '/NavigatorObserver',
-          'label': label ?? '',
-          'hint': hint ?? ''
-        }
-      });
-    }
-    return accessibility;
-  }
 
   static Map<String, dynamic> checkForSemantics(WidgetPath? wp) {
     final BuildContext? context = wp!.context;

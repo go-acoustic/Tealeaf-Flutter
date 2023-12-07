@@ -436,7 +436,7 @@
 }
 
 
-- (void) tlScreenviewAndLayout:(NSString *) screenViewType addRef:(NSString *) referrer addLayouts:(NSArray *) layouts addTimestamp: (NSString *) timestamp {
+- (void) tlScreenviewAndLayout:(NSString *) screenViewType addRef:(NSString *) referrer addLayouts:(NSArray *) layouts addLogicalPageName: (NSString *) logicalPageName {
     if (referrer == nil) {
         referrer = @"none";
     }
@@ -469,13 +469,13 @@
     
     NSString *hash = tlImage == nil ? @"" : [tlImage getHash];
     NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
-    NSString *screenName = [NSString stringWithFormat:@"FlutterViewController: %@", timestamp];
+//    NSString *screenName = [NSString stringWithFormat:@"FlutterViewController: %@", logicalPageName];
     
     NSMutableDictionary *screenContext = [@{
         @"screenview":@{
             @"type": screenViewType,
-            @"name": screenName,
-            @"class": screenName,
+            @"name": logicalPageName,
+            @"class": logicalPageName,
             @"referrer": referrer
         }
     } mutableCopy];
@@ -498,8 +498,8 @@
     
     NSMutableDictionary *layout = [@{
         @"layout": @{
-            @"name": name,
-            @"class": name,
+            @"name": logicalPageName,
+            @"class": logicalPageName,
             @"controls": updatedLayouts   // aka controls
         },
         @"version": @"1.0",
@@ -609,7 +609,7 @@
 
 - (void) tlScreenview: (NSDictionary *) args {
     NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
-    NSString *timestamp = (NSString *) [self checkForParameter:args withKey:@"timeStamp"];
+    NSString *logicalPageName = (NSString *) [self checkForParameter:args withKey:@"logicalPageName"];
     NSObject *layouts   = args[@"layoutParameters"];
     
     if (layouts != nil) {
@@ -632,7 +632,7 @@
     [[TLFCustomEvent sharedInstance] logScreenViewContext:pageName applicationContext:tlScreenViewType referrer:nil];
     [[TLFCustomEvent sharedInstance] logPrintScreenEvent];
     */
-    [self tlScreenviewAndLayout:tlType addRef:nil addLayouts:(NSArray *)layouts addTimestamp:timestamp];
+    [self tlScreenviewAndLayout:tlType addRef:nil addLayouts:(NSArray *)layouts addLogicalPageName:logicalPageName];
     
     /*
     NSDictionary *data = @{@"item1": @"Data1", @"item2": @"Data2"};

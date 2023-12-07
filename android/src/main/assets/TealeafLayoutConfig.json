@@ -24,7 +24,10 @@
         "MaskValueList": [
         ],
         "MaskAccessibilityLabelList": [
-          "Tealeaf Accessibility Label"
+          "Home - Tealeaf masking Label",
+          "Shrine - Tealeaf masking label",
+          "username",
+          "password"
         ]
       }
     },
@@ -33,10 +36,6 @@
       "DisplayName": "Home",
       "CaptureLayoutOn": 2,
       "CaptureScreenshotOn": 2
-    },
-    "ControlsFragment1": {
-      "DisplayName": "CA1",
-      "CaptureLayoutDelay": 800
     }
   },
   "AppendMapIds": {

@@ -101,6 +101,11 @@ class _ShrineLogo extends StatelessWidget {
             'SHRINE',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
+          Semantics(
+              label: 'Shrine - Tealeaf masking label',
+              hint: 'Shrine - Tealeaf test hint',
+              child: const Text('Shrine - Tealeaf Accessibility Label'),
+            ),
         ],
       ),
     );
@@ -110,18 +115,21 @@ class _ShrineLogo extends StatelessWidget {
 class _UsernameTextField extends StatelessWidget {
   const _UsernameTextField();
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return TextField(
-      textInputAction: TextInputAction.next,
-      restorationId: 'username_text_field',
-      cursorColor: colorScheme.onSurface,
-      decoration: InputDecoration(
-        labelText: GalleryLocalizations.of(context)!.shrineLoginUsernameLabel,
-        labelStyle: TextStyle(
-          letterSpacing: letterSpacingOrNone(mediumLetterSpacing),
+    return Semantics(
+      label: 'Tealeaf label',
+      child: TextField(
+        textInputAction: TextInputAction.next,
+        restorationId: 'username_text_field',
+        cursorColor: colorScheme.onSurface,
+        decoration: InputDecoration(
+          labelText: GalleryLocalizations.of(context)!.shrineLoginUsernameLabel,
+          labelStyle: TextStyle(
+            letterSpacing: letterSpacingOrNone(mediumLetterSpacing),
+          ),
         ),
       ),
     );

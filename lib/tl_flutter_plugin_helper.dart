@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:tl_flutter_plugin/tl_flutter_plugin.dart';
 import 'package:tl_flutter_plugin/logger.dart';
 
@@ -268,7 +267,7 @@ class TlBinder extends WidgetsBindingObserver {
   int screenHeight = 0;
   int lastFrameTime = 0;
   bool loggingScreen = false;
-  Timer? logFrameTimer;
+  // Timer? logFrameTimer;
 
   bool? maskingEnabled;
   List<dynamic>? maskIds;
@@ -344,10 +343,10 @@ class TlBinder extends WidgetsBindingObserver {
 
     binding.addPersistentFrameCallback((timestamp) {
       if (usePostFrame) {
-        tlLogger.v("Frame handling with single PostFrame callbacks");
+        // tlLogger.v("Frame handling with single PostFrame callbacks");
         handleWithPostFrameCallback(binding, timestamp);
       } else {
-        tlLogger.v("Frame handling with direct persistent callbacks");
+        // tlLogger.v("Frame handling with direct persistent callbacks");
         handleScreenUpdate(timestamp);
       }
     });
@@ -375,7 +374,8 @@ class TlBinder extends WidgetsBindingObserver {
     }
     return maskingEnabled;
   }
-
+  
+  //  TODO:  Is this required?  not sure if tlSetEnvironment is necessary since the plugin could get the info
   void logFrameIfChanged(WidgetsBinding binding, Duration timestamp) async {
     // ignore: deprecated_member_use
     final Element? rootViewElement = binding.renderViewElement;
@@ -406,37 +406,37 @@ class TlBinder extends WidgetsBindingObserver {
     final int elapsed = currentTime - lastFrameTime;
     bool skippingFrame = false;
 
-    if (logFrameTimer != null && logFrameTimer!.isActive) {
-      tlLogger.v(
-          'Cancelling screenview logging, frame interval, elapsed: $elapsed, start: $currentTime');
-      logFrameTimer!.cancel();
-      logFrameTimer = null;
-      skippingFrame = loggingScreen;
-    } else {
-      // tlLogger.v(
-      //     'Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
-    }
-    final int waitTime =
-        (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
+    // if (logFrameTimer != null && logFrameTimer!.isActive) {
+    //   tlLogger.v(
+    //       'Cancelling screenview logging, frame interval, elapsed: $elapsed, start: $currentTime');
+    //   logFrameTimer!.cancel();
+    //   logFrameTimer = null;
+    //   skippingFrame = loggingScreen;
+    // } else {
+    //   // tlLogger.v(
+    //   //     'Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
+    // }
+    // final int waitTime =
+    //     (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
 
     /// Inline function
-    void performScreenview() async {
-      loggingScreen = true;
-      logFrameTimer = null;
-      final int timerDelay =
-          DateTime.now().millisecondsSinceEpoch - currentTime;
-      final int frameInterval = lastFrameTime == 0 ? 0 : elapsed;
-      final List<Map<String, dynamic>> layouts = await getAllLayouts();
+    // void performScreenview() async {
+    //   loggingScreen = true;
+    //   logFrameTimer = null;
+    //   final int timerDelay =
+    //       DateTime.now().millisecondsSinceEpoch - currentTime;
+    //   final int frameInterval = lastFrameTime == 0 ? 0 : elapsed;
+    //   final List<Map<String, dynamic>> layouts = await getAllLayouts();
 
-      WidgetPath.clearPathCache();
-      await checkForScroll();
-      tlLogger.v(
-          'Logging screenview, delay: $timerDelay, wait: $waitTime, frame interval: $frameInterval, Layout count: ${layouts.length}');
+    //   WidgetPath.clearPathCache();
+    //   await checkForScroll();
+    //   tlLogger.v(
+    //       'Logging screenview, delay: $timerDelay, wait: $waitTime, frame interval: $frameInterval, Layout count: ${layouts.length}');
       
-      // TODO:  We don't want to keep logging screen here
-      // await PluginTealeaf.onScreenview("LOAD", timestamp, layouts);
-      loggingScreen = false;
-    }
+    //   // TODO:  We don't want to keep logging screen here
+    //   // await PluginTealeaf.onScreenview("LOAD", timestamp, layouts);
+    //   loggingScreen = false;
+    // }
 
     if (lastFrameTime == 0) {
       tlLogger.v('Logging first frame');
@@ -444,7 +444,7 @@ class TlBinder extends WidgetsBindingObserver {
     } else if (skippingFrame) {
       tlLogger.v('Logging screenview in process, skipping frame');
     } else {
-      tlLogger.v("Logging screenview, wait: $waitTime");
+      // tlLogger.v("Logging screenview, wait: $waitTime");
       // logFrameTimer =
       //     Timer(Duration(milliseconds: waitTime), performScreenview);
     }

@@ -392,9 +392,19 @@ class _AnimatedHomePageState extends State<_AnimatedHomePage>
           restorationId: 'home_list_view',
           children: [
             Semantics(
-              label: 'Tealeaf test label',
-              hint: 'Tealeaf test hint',
-              child: const Text('Tealeaf Accessibility Label'),
+              label: 'Home - Tealeaf test label1',
+              hint: 'Home - Tealeaf test hint',
+              child: const Text('Home - Tealeaf Visible Accessibility Label'),
+            ),
+          Semantics(
+              label: 'Home - Tealeaf masking Label',
+              hint: 'Home - Tealeaf masking Label',
+              child: const Text('Home - Tealeaf masking Label'),
+            ),
+          Semantics(
+              label: 'Home - Tealeaf masking Label',
+              hint: 'Home - Tealeaf masking Label',
+              child: const Text('Home - Tealeaf masking Label'),
             ),
             const SizedBox(height: 8),
             Container(

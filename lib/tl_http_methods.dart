@@ -1,4 +1,6 @@
 // HTTP supported methods list
+// ignore_for_file: constant_identifier_names
+
 enum Method {
   HEAD,
   GET,

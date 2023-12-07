@@ -1,6 +1,7 @@
 package com.example.tl_flutter_plugin;
 
 import static com.example.tl_flutter_plugin.ScreenUtil.screenSnapshot;
+import static com.tl.uic.util.ValueUtil.compareAccessibilityListAndMask;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -8,6 +9,8 @@ import android.app.Application;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Build;
 import android.text.TextPaint;
@@ -61,6 +64,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -119,22 +125,36 @@ class ScreenUtil {
         }
     }
 
+    /**
+     * Take a screenshot using Flutter renderer.  Note:  getBitmap() requires UI thread.
+     * 
+     * @param activity
+     * @param renderer
+     * @return Bitmap.
+     */
     static Bitmap screenSnapshot(Activity activity, Object renderer) {
         final View view = activity.getWindow().getDecorView().getRootView();
-        Bitmap bitmap = null;
+        final Bitmap[] bitmap = new Bitmap[1];
+        final CountDownLatch latch = new CountDownLatch(1);
 
-        view.setDrawingCacheEnabled(true);
+        activity.runOnUiThread(() -> {
+            view.setDrawingCacheEnabled(true);
 
-        //if (renderer.getClass() == FlutterView.class) {
-        //  bitmap = ((FlutterView) renderer).getBitmap();
-        //} else
-        if (renderer.getClass() == FlutterRenderer.class) {
-            bitmap = ((FlutterRenderer) renderer).getBitmap();
+            if (renderer.getClass() == FlutterRenderer.class) {
+                bitmap[0] = ((FlutterRenderer) renderer).getBitmap();
+            }
+
+            view.setDrawingCacheEnabled(false);
+            latch.countDown(); // Signal that the bitmap is ready
+        });
+
+        try {
+            latch.await(); // Wait for the bitmap to be captured
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
-        view.setDrawingCacheEnabled(false);
-
-        return bitmap;
+        return bitmap[0];
     }
 
     static byte[] compress(final Bitmap bitmap) {
@@ -156,59 +176,44 @@ class ScreenUtil {
         return compressed;
     }
 
+    /**
+     * Use positions data for screen masking.
+     *
+     * @param positionList
+     * @param bitmap
+     * @return Masked screenshot Bitmap.
+     */
     static Bitmap obscureScreenshot(List<Position> positionList, Bitmap bitmap) {
-        Bitmap bitmapCopy = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-        final Canvas canvas = new Canvas(bitmapCopy);
-        final TextPaint paint = new TextPaint();
+        Bitmap mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+        final Canvas canvasFinal = new Canvas(mutableBitmap);
 
-        paint.setARGB(0xff, 0xff, 0, 0); //paint.setColor(-1);
-        paint.bgColor = -16777216;
-        paint.setStyle(android.graphics.Paint.Style.FILL);
+        final TextPaint paint = new TextPaint();
+        paint.setColor(Color.WHITE);
+        paint.bgColor = Color.BLACK;
+        paint.setStyle(Paint.Style.FILL);
+
         TextPaint backgroundPaint = new TextPaint();
-        backgroundPaint.setColor(-3355444);
-        backgroundPaint.setStyle(android.graphics.Paint.Style.FILL);
+        backgroundPaint.setColor(Color.LTGRAY);
+        backgroundPaint.setStyle(Paint.Style.FILL);
 
         for (Position position : positionList) {
+            paint.setTextSize(position.getWidth());
             final Rect scaledRect = position.getRect();
 
-            canvas.drawRect(scaledRect, backgroundPaint);
+            canvasFinal.drawRect(scaledRect, backgroundPaint);
 
-            final String text = position.getLabel();
+            final float x = (float) scaledRect.left;
+            float y = (float) scaledRect.top + paint.getTextSize();
 
-            if (!TextUtils.isEmpty(text)) {
-                final String[] lines = position.getLabel().split("\n");
-
-                if (position.getWidth() == 0) {
-                    int maxLineLength = 1;
-
-                    for (final String line : lines) {
-                        if (line.length() > maxLineLength)
-                            maxLineLength = line.length();
-                    }
-                    position.setWidth(2 * (scaledRect.right - scaledRect.left) / maxLineLength);
-                    position.setHeight(position.getWidth() / 2);
-                }
-
-                paint.setTextSize((float) position.getWidth());
-
-                final float x = (float) scaledRect.left;
-                final float ascent = paint.ascent();
-                final float descent = paint.descent();
-                final float yDelta = descent - ascent;
-                final float textSize = paint.getTextSize();
-                //float y = (float) scaledRect.top + paint.getTextSize() * 0.8f; // TBD: Does this always work?
-                float inc = (yDelta - textSize) / 2;
-                float y = (float) scaledRect.top + textSize + ((lines.length - 1) * inc);
-
-                for (final String line : lines) {
-                    canvas.drawText(line, x, y, paint);
-                    y += yDelta;
-                }
+            for (final String line : position.getLabel().split("\n")) {
+                canvasFinal.drawText(line, x, y, paint);
+                y += paint.descent() - paint.ascent();
             }
+
         }
         bitmap.recycle();
 
-        return bitmapCopy;
+        return mutableBitmap;
     }
 
     static float getAsFloat(Object o) {
@@ -324,12 +329,25 @@ class ScreenUtil {
             final Object styleObject = wLayout.get("style");
             @SuppressWarnings("unchecked") final HashMap<String, String> accessibility = (HashMap<String, String>) wLayout.get("accessibility");
 
+            String maskedString = null;
+            
             if (accessibility != null) {
-                baseTarget.setAccessibility(new Accessibility(
+                final Accessibility accessibilityForMask = new Accessibility(
                         accessibility.get("id"),
                         accessibility.get("label"),
-                        accessibility.get("hint"))
-                );
+                        accessibility.get("hint"));
+
+                if (!TextUtils.isEmpty(accessibility.get("label"))) {
+                    maskedString = compareAccessibilityListAndMask(Tealeaf.getCurrentLogicalPageName(), accessibilityForMask, accessibility.get("label"));
+
+                    // Masked, add to position list for masking
+                    if (!maskedString.equals(accessibilityForMask.getLabel())) {
+                        maskPositions.add(position);
+                    }
+                    LogInternal.log("Masked label " + accessibility.get("label") + ", to " + maskedString);
+                }
+                
+                baseTarget.setAccessibility(accessibilityForMask);
             }
 
             if (styleObject instanceof Map) {
@@ -429,10 +447,7 @@ class ScreenUtil {
 
                 baseTarget.setImage(image);
             }
-
-            if (position.getLabel() != null) {
-                maskPositions.add(position);
-            }
+            
             layout.getControls().add(baseTarget);
         }
     }
@@ -709,6 +724,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     private MethodChannel channel;
     private Object renderer;
     private ActivityPluginBinding activityBinding;
+    private ExecutorService _executorPool;
 
     @SuppressWarnings("deprecation")
     @Override
@@ -764,6 +780,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
         activityBinding = binding;
 
+        // TODO:  Init Activity state, but is it necessary?
         Tealeaf.onResume(getActivity(), null);
     }
 
@@ -884,7 +901,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                         result.error(NO_ARGS, "screenview event requires arguments list", getStackTraceAsString());
                         return;
                     }
-                     tlScreenviewMessage(args);
+                    tlScreenviewMessage(args);
 //                    logScreenLayout(args);
                     result.success(true);
                     break;
@@ -963,7 +980,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         connection.setLoadTime(loadTime);
         connection.setResponseDataSize(responseSize);
         connection.setStatusCode(statusCode);
-        
+
         Tealeaf.logConnection(connection);
     }
 
@@ -997,43 +1014,72 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     //     }
     // }
 
-    void tlGestureMessage(Object args) throws Exception {
-        final String tlType = checkForParameter(args, "tlType");
-        final List<HashMap<String, Object>> widgetLayouts = checkForParameter(args, "layoutParameters");
+    /**
+     * @param args
+     * @return
+     */
+    CountDownLatch tlGestureMessage(Object args) {
+        final CountDownLatch cdl = new CountDownLatch(1);
 
-        LOGGER.log(Level.INFO, "Tealeaf message gesture event: " + "tlType: " + tlType + ", page: " +
-                this.lastPage + ", last pointer event was up event: " + (lastPointerEvent == lastPointerUpEvent));
-
-        /* Keep in case we need to take snapshot */
-        final List<Position> maskedPositions = new ArrayList<>();
-
-        for (HashMap<String, Object> wLayout : widgetLayouts) {
-            final Position position = ScreenUtil.getPositionFromLayout(wLayout);
-
-            if (position.getLabel() != null) {
-                maskedPositions.add(position);
-            }
+        // Do not add gesture control to queue
+        if (getActivity() == null) {
+            cdl.countDown();
+            return cdl;
+        }
+        if (_executorPool == null || _executorPool.isShutdown()) {
+            _executorPool = Executors.newCachedThreadPool();
         }
 
-        if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
-            final Activity activity = getActivity();
+        final String lastPage = this.lastPage;
 
-      /*
-      final Bitmap screenBitmap = ScreenUtil.screenSnapshot(activity, renderer);
-      LOGGER.log(Level.INFO, "GESTURE: screen same?: " + screenBitmap.sameAs(lastRawScreen));
-      */
-            if (FLUTTER_GESTURE_EVENT) {
-                //final byte[] imageBytes = ScreenUtil.takeSnapshotAndCompress(activity, getRenderer(), maskedPositions);
+        _executorPool.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final String tlType = checkForParameter(args, "tlType");
+                    final List<HashMap<String, Object>> widgetLayouts = checkForParameter(args, "layoutParameters");
 
-                if (Tealeaf.getGesturePlaceHolder().size() > 0) {
-                    Tealeaf.getGesturePlaceHolder().take(); // Remove placeholder (not needed?)
+                    LOGGER.log(Level.INFO, "Tealeaf message gesture event: " + "tlType: " + tlType + ", page: " +
+                            lastPage + ", last pointer event was up event: " + (lastPointerEvent == lastPointerUpEvent));
+
+                    /* Keep in case we need to take snapshot */
+                    final List<Position> maskedPositions = new ArrayList<>();
+
+                    for (HashMap<String, Object> wLayout : widgetLayouts) {
+                        final Position position = ScreenUtil.getPositionFromLayout(wLayout);
+
+                        if (position.getLabel() != null) {
+                            maskedPositions.add(position);
+                        }
+                    }
+
+                    if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
+                        final Activity activity = getActivity();
+
+                          /*
+                          final Bitmap screenBitmap = ScreenUtil.screenSnapshot(activity, renderer);
+                          LOGGER.log(Level.INFO, "GESTURE: screen same?: " + screenBitmap.sameAs(lastRawScreen));
+                          */
+                        if (FLUTTER_GESTURE_EVENT) {
+                            //final byte[] imageBytes = ScreenUtil.takeSnapshotAndCompress(activity, getRenderer(), maskedPositions);
+
+                            if (Tealeaf.getGesturePlaceHolder().size() > 0) {
+                                Tealeaf.getGesturePlaceHolder().take(); // Remove placeholder (not needed?)
+                            }
+                            logGestureEvent(activity, tlType, args, EOCore.getDefaultLogLevel());
+                            lastPointerEvent = null;
+                        } else {
+                            Tealeaf.logGestureEvent(activity, motionEvent(), tlType, lastPage);
+                        }
+                    }
+                } catch (final Exception e) {
+                    com.tl.uic.util.LogInternal.logException(e, "Tealeaf plugin error:  Trying to log screenview.");
+                } finally {
+
                 }
-                logGestureEvent(activity, tlType, args, EOCore.getDefaultLogLevel());
-                lastPointerEvent = null;
-            } else {
-                Tealeaf.logGestureEvent(activity, motionEvent(), tlType, this.lastPage);
             }
-        }
+        });
+        return cdl;
     }
 
     void tlPointerEventMessage(Object args) throws Exception {
@@ -1070,7 +1116,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         String logicalPageName = checkForParameter(args, "name");
         int delay = 0;
 
-        if (((Map)args).size() == 3 && ((Map<?, ?>) args).get("delay") != null) {
+        if (((Map) args).size() == 3 && ((Map<?, ?>) args).get("delay") != null) {
             delay = checkForParameter(args, "delay");
         }
 
@@ -1086,7 +1132,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
      * This method logs the unload event of the current screen view.
      *
      * @param logicalPageName the logical name of the current page.
-     * @param referrer the source that led the user to this page.
+     * @param referrer        the source that led the user to this page.
      */
     void logScreenViewContextUnLoad(Object args) throws Exception {
         // Checking for 'name' parameter in the args, which is supposed to be the logical name of the current page
@@ -1102,70 +1148,76 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         Tealeaf.logScreenview(getActivity(), logicalPageName, ScreenviewType.UNLOAD, referrer);
     }
 
-    
-    void tlScreenviewMessage(Object args) throws Exception {
-        final Activity activity = getActivity();
-        final Layout layout = new Layout();
-        final String tlType = checkForParameter(args, "tlType");
-        final String timestamp = checkForParameter(args, "timeStamp");
-        final List<HashMap<String, Object>> widgetLayouts = parameter(args, "layoutParameters");
-        final List<Position> maskedPositions = new ArrayList<>();
 
-        final long timeMillis = Long.parseLong(timestamp) / 1000;
-        @SuppressLint("SimpleDateFormat") final DateFormat dateFormat = new SimpleDateFormat("hh:mm:ss.SSS");
-        final String date = dateFormat.format(timeMillis);
+    /**
+     * Handles Tealeaf type 10 message via Flutter's MethodChannel.
+     *
+     * @param args Basic types supported by Flutter.
+     * @return Count down latch for testing.
+     */
+    CountDownLatch tlScreenviewMessage(Object args) {
+        final CountDownLatch cdl = new CountDownLatch(1);
 
-        LOGGER.log(Level.INFO, "Tealeaf screen update message: " + tlType +
-                ", timestamp: " + timestamp + ", as date: " + date);
-
-        final long start = System.currentTimeMillis();
-        final Bitmap screenBitmap = screenSnapshot(activity, renderer);
-
-        byte[] nextImageBytes = new byte[0];
-
-        if (screenBitmap == null) {
-            LOGGER.log(Level.WARNING, "Warning: Failed to obtain screen snapshot from Flutter!");
-        } else {
-            // lastRawScreen = screenBitmap.copy(Bitmap.Config.ARGB_8888, false);
-            ScreenUtil.setControls(layout, widgetLayouts, scaleWidth, scaleHeight, maskedPositions);
-
-            final byte[] imageBytes = ScreenUtil.obscureAndCompress(screenBitmap, maskedPositions);
-
-            if (imageBytes == null) {
-                LOGGER.log(Level.WARNING, "Warning: Unable to obscure and/or compress screen image!");
-            } else {
-                nextImageBytes = imageBytes;
-            }
+        // Do not add gesture control to queue
+        if (getActivity() == null) {
+            cdl.countDown();
+            return cdl;
         }
-        final long end = System.currentTimeMillis();
-        LOGGER.log(Level.INFO, "*** Screenshot elapsed time (ms): " + (end - start) +
-                ", Thread: " + Thread.currentThread().getName());
-
-        final Screenview current = Tealeaf.getCurrentScreenView();
-
-        if (current != null) {
-            final String pageName = current.getLogicalPageName();
-            final String currentName = Tealeaf.getCurrentLogicalPageName();
-
-            LOGGER.log(Level.INFO, "Current page (Md5): " + pageName +
-                    ", next MD5: " + currentName + ", final image size: " + nextImageBytes.length);
-
-            if (lastPage.contentEquals(currentName)) {
-                LOGGER.log(Level.INFO, "*** Skipping log of screenview, transition screen has not updated");
-                return;
-            }
-            LOGGER.log(Level.INFO, "*** Screen is updated, logging changed screen.");
-
-            Tealeaf.logScreenview(activity, currentName, ScreenviewType.LOAD, lastPage);
-            ScreenUtil.logLayout(activity, currentName, layout, nextImageBytes);
-
-//            TLFCache.flush(true); //TBD: remove (force flush for now for debugging)
-
-            lastPage = currentName;
-            lastPageImage = layout.getBackgroundImage();
-        } else {
-            LOGGER.log(Level.INFO, "No current screenview from Tealeaf!");
+        if (_executorPool == null || _executorPool.isShutdown()) {
+            _executorPool = Executors.newCachedThreadPool();
         }
+
+        _executorPool.execute(() -> {
+            try {
+                final Activity activity = getActivity();
+                final Layout layout = new Layout();
+                final String tlType = checkForParameter(args, "tlType");
+                final String logicalPageName = checkForParameter(args, "logicalPageName");
+                final List<HashMap<String, Object>> widgetLayouts = parameter(args, "layoutParameters");
+                final List<Position> maskedPositions = new ArrayList<>();
+
+                /**
+                 * Create type 2 and set the context for current screen.
+                 */
+                Tealeaf.logScreenview(activity, logicalPageName, ScreenviewType.LOAD, lastPage);
+
+                final Bitmap screenBitmap = screenSnapshot(activity, renderer);
+
+                byte[] nextImageBytes = new byte[0];
+
+                if (screenBitmap == null) {
+                    LOGGER.log(Level.WARNING, "Warning: Failed to obtain screen snapshot from Flutter!");
+                } else {
+                    // lastRawScreen = screenBitmap.copy(Bitmap.Config.ARGB_8888, false);
+                    ScreenUtil.setControls(layout, widgetLayouts, scaleWidth, scaleHeight, maskedPositions);
+
+                    final byte[] imageBytes = ScreenUtil.obscureAndCompress(screenBitmap, maskedPositions);
+
+                    if (imageBytes == null) {
+                        LOGGER.log(Level.WARNING, "Warning: Unable to obscure and/or compress screen image!");
+                    } else {
+                        nextImageBytes = imageBytes;
+                    }
+                }
+
+                LOGGER.log(Level.INFO, "Current page (Md5): " + logicalPageName +
+                        ", next MD5: " + logicalPageName + ", final image size: " + nextImageBytes.length);
+
+                if (lastPage.contentEquals(logicalPageName)) {
+                    LOGGER.log(Level.INFO, "*** Skipping log of screenview, transition screen has not updated");
+                    return;
+                }
+                LOGGER.log(Level.INFO, "*** Screen is updated, logging changed screen.");
+
+                ScreenUtil.logLayout(activity, logicalPageName, layout, nextImageBytes);
+
+                lastPage = logicalPageName;
+                lastPageImage = layout.getBackgroundImage();
+            } catch (final Exception e) {
+                com.tl.uic.util.LogInternal.logException(e, "Tealeaf plugin error:  Trying to log screenview.");
+            }
+        });
+        return cdl;
     }
 
     void tlExceptionMessage(Object args) throws Exception {
@@ -1237,8 +1289,8 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
      *
      * @param args
      * @param key
-     * @return
      * @param <T>
+     * @return
      */
     protected static <T> T checkForParameter(Object args, String key) {
         T value = null;
@@ -1506,8 +1558,8 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
             gesture.setEventInfo(eventInfo);
             gesture.setTouches(touches);
 
-            if (LayoutUtil.canCaptureUserEvents(activity, "") && LayoutUtil.canTakeScreenShot(activity, "")) {
-                
+            if (LayoutUtil.canCaptureUserEvents(activity, Tealeaf.getCurrentLogicalPageName()) && LayoutUtil.canTakeScreenShot(activity, Tealeaf.getCurrentLogicalPageName())) {
+
                 // TBD: No longer used? (updated to latest config files -- apparent change)
                 // Thread.sleep(EOCore.getConfigItemLong("GestureConfirmedScreenshotDelay", TealeafEOLifecycleObject.getInstance()));
                 gesture.setBase64Image(lastPageImage.getBase64Image());

@@ -132,10 +132,13 @@ class ScreenUtil {
      * @param renderer
      * @return Bitmap.
      */
-    static Bitmap screenSnapshot(Activity activity, Object renderer) {
+    static Bitmap screenSnapshot(Activity activity, Object renderer) throws InterruptedException {
         final View view = activity.getWindow().getDecorView().getRootView();
         final Bitmap[] bitmap = new Bitmap[1];
         final CountDownLatch latch = new CountDownLatch(1);
+
+        // Ensure there's delay to allow async to finish drawing on the screen
+        Thread.sleep(500);
 
         activity.runOnUiThread(() -> {
             view.setDrawingCacheEnabled(true);
@@ -321,7 +324,6 @@ class ScreenUtil {
             baseTarget.setType(wLayout.get("type") + "");
             baseTarget.setSubType(wLayout.get("subType") + "");
 
-            baseTarget.setCurrentState(getCurrentState(wLayout));
             baseTarget.setPosition(scaledPosition);
             baseTarget.setTlType(tlType);
 
@@ -343,6 +345,9 @@ class ScreenUtil {
                     // Masked, add to position list for masking
                     if (!maskedString.equals(accessibilityForMask.getLabel())) {
                         maskPositions.add(position);
+                    } else {
+                        // Masked Widget, skip currstate
+                        baseTarget.setCurrentState(getCurrentState(wLayout));
                     }
                     LogInternal.log("Masked label " + accessibility.get("label") + ", to " + maskedString);
                 }
@@ -936,7 +941,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                 }
                 case "connection": {
                     if (args == null) {
-                        result.error(NO_ARGS, "custom event requires arguments list", getStackTraceAsString());
+                        result.error(NO_ARGS, "connection event requires arguments list", getStackTraceAsString());
                         return;
                     }
                     tlConnectionMessage(args);
@@ -951,6 +956,14 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                     result.success(tlMaskText(args));
                     break;
                 }
+                case "focuschanged":
+                    if (args == null) {
+                        result.error(NO_ARGS, "focus changed event requires arguments list", getStackTraceAsString());
+                        return;
+                    }
+                    tlFocusChangeMessage(args);
+                    result.success(null);
+                    break;
                 default:
                     result.notImplemented();
                     break;
@@ -982,6 +995,34 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         connection.setStatusCode(statusCode);
 
         Tealeaf.logConnection(connection);
+    }
+
+    /**
+     * @param args double x, x coordinate of the view on which the focus changed
+     *             double y, y coordinate of the view on which the focus changed
+     *             boolean focused, true if the the view was focused, false otherwise
+     * @throws Exception
+     */
+    void tlFocusChangeMessage(Object args) throws Exception {
+        LOGGER.log(Level.INFO, "Tealeaf on focus changed logging");
+
+        // Parse arguments
+        final float x = Float.parseFloat(checkForParameter(args, "x"));
+        final float y = Float.parseFloat(checkForParameter(args, "y"));
+        final boolean focused = Boolean.parseBoolean(checkForParameter(args, "focused"));
+        
+        // Get the view
+        final Activity activity = getActivity();
+        final View rootView = activity.getWindow().getDecorView();
+        final ArrayList<Object> viewItems = GestureUtil.getViewByXY(rootView, x, y);
+        final View view = (View) viewItems.get(0);
+        LOGGER.log(Level.INFO, String.format("Tealeaf on focus changed view found: %s\n %s", view.getClass().getSimpleName(), view.toString()));
+
+        // Get event type
+        final String eventType = focused ? Tealeaf.TLF_ON_FOCUS_CHANGE_IN : Tealeaf.TLF_ON_FOCUS_CHANGE_OUT;
+
+        // Log event
+        Tealeaf.logEvent(view, eventType);
     }
 
     void tlCustomEventMessage(Object args) throws Exception {

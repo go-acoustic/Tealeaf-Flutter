@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/gallery_localizations.dart';
+import 'package:tl_flutter_plugin/tl_text_field_listener.dart';
 
 // BEGIN textFieldDemo
 
@@ -214,6 +215,12 @@ class TextFormFieldDemoState extends State<TextFormFieldDemo>
   Widget build(BuildContext context) {
     const sizedBoxSpace = SizedBox(height: 24);
     final localizations = GalleryLocalizations.of(context)!;
+    final widgetKey = GlobalKey();
+    FocusNode widgetFocusNode = FocusNode();
+
+    widgetFocusNode.addListener(() {
+      TlTextFieldListener.setupFocusListener(widgetKey, widgetFocusNode.hasFocus);
+    });
 
     return Form(
       key: _formKey,
@@ -226,6 +233,7 @@ class TextFormFieldDemoState extends State<TextFormFieldDemo>
             children: [
               sizedBoxSpace,
               TextFormField(
+                key: widgetKey,
                 restorationId: 'name_field',
                 textInputAction: TextInputAction.next,
                 textCapitalization: TextCapitalization.words,
@@ -240,6 +248,7 @@ class TextFormFieldDemoState extends State<TextFormFieldDemo>
                   _phoneNumber.requestFocus();
                 },
                 validator: _validateName,
+                focusNode: widgetFocusNode,
               ),
               sizedBoxSpace,
               TextFormField(

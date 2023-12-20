@@ -2,6 +2,7 @@
 #import "TlImage.h"
 #import "PointerEvent.h"
 
+#import <EOCore/EOApplicationHelper.h>
 
 @implementation TlFlutterPlugin {
     NSInteger _screenWidth;
@@ -225,53 +226,58 @@
     return pe;
 }
 
-- (UIImage *) maskImageWithObjects: (UIImage *) bgImage withObjects: (NSArray *) maskObjects {
-    CGFloat  fontScale = 0.72f;
-    UIImage  *maskedUIImage = nil;
-    CGSize   bgImageSize = bgImage.size;
-    UIColor  *textColor  = [UIColor redColor]
-    ;
+/**
+ Applies a mask to an image with specified objects and their attributes.
+
+ @param bgImage The background image to be masked.
+ @param maskObjects An array of dictionaries containing text and position attributes for the mask.
+ Each dictionary should contain keys: @"text" (NSString) and @"position" (NSDictionary).
+ The @"position" dictionary should contain keys: @"x", @"y", @"width", @"height" (CGFloat).
+ @return A new UIImage masked with the provided objects.
+ */
+- (UIImage *)maskImageWithObjects:(UIImage *)bgImage withObjects:(NSArray *)maskObjects {
+    CGFloat fontScale = 0.72f;
+    UIImage *maskedUIImage = nil;
+    CGSize bgImageSize = bgImage.size;
+    UIColor *textColor = [UIColor whiteColor]; // Changed text color to white
+    
     if ([[UIScreen mainScreen] respondsToSelector:@selector(scale)]) {
-        UIGraphicsBeginImageContextWithOptions(bgImageSize, NO, _scale);
-    }
-    else {
+        UIGraphicsBeginImageContextWithOptions(bgImageSize, NO, UIScreen.mainScreen.scale);
+    } else {
         UIGraphicsBeginImageContext(bgImageSize);
     }
+    
     [bgImage drawInRect:CGRectMake(0, 0, bgImageSize.width, bgImageSize.height)];
     [[UIColor lightGrayColor] set];
-    for (int i = 0; i < [maskObjects count]; i++) {
-        NSDictionary *atts = maskObjects[i];
-        NSString *text = (NSString *) atts[@"text"];
-        NSDictionary *position = (NSDictionary *) atts[@"position"];
-        CGFloat x = [position[@"x"] floatValue];
-        CGFloat y = [position[@"y"] floatValue];
-        CGFloat width = [position[@"width"] floatValue];
-        CGFloat height = [position[@"height"] floatValue];
-        CGRect  rect = CGRectMake(x, y, width, height);
-       
-        CGContextFillRect(UIGraphicsGetCurrentContext(), rect);
     
+    for (NSDictionary *atts in maskObjects) {
+        NSString *text = (NSString *)atts[@"text"];
+        NSDictionary *position = (NSDictionary *)atts[@"position"];
+        CGFloat x = 0;
+        CGFloat y = [position[@"y"] floatValue];
+        CGFloat width = [UIScreen mainScreen].bounds.size.width;
+        CGFloat height = [position[@"height"] floatValue];
+        CGRect rect = CGRectMake(x, y, width, height);
+        
+        CGContextFillRect(UIGraphicsGetCurrentContext(), rect);
+        
         NSArray *lines = [text componentsSeparatedByString:@"\n"];
-        CGFloat lineCount = [lines count];
-        CGFloat lineHeight = (float) round(height / lineCount);
-        UIFont  *font = [UIFont systemFontOfSize:(lineHeight * fontScale)];
+        CGFloat lineHeight = height / (float)lines.count;
+        UIFont *font = [UIFont systemFontOfSize:(lineHeight * fontScale)];
         NSDictionary *attrs = @{NSForegroundColorAttributeName: textColor, NSFontAttributeName: font};
-        CGFloat yOffset = (float) round(lineHeight * (1 - fontScale) / 2);
-        CGFloat xOffset = 2; // TBD: Should we try to center horizontally?
         
-        rect.origin.x += xOffset;
-        rect.origin.y += yOffset;
-        
-        for (int row = 0; row < [lines count]; row++) {
-            [((NSString *) lines[row]) drawInRect:CGRectIntegral(rect) withAttributes: attrs];
+        for (NSString *line in lines) {
+            [line drawInRect:CGRectIntegral(rect) withAttributes:attrs];
             rect.origin.y += lineHeight;
         }
     }
+    
     maskedUIImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
     return maskedUIImage;
 }
+
 
 - (UIImage *) takeScreenShot {
     UIImage *screenImage = nil;
@@ -304,7 +310,7 @@
     return screenImage;
 }
 
-- (NSMutableArray *) fixupLayoutEntries:(NSArray *) controls returnMaskArray: (NSMutableArray *) maskItems {
+- (NSMutableArray *) fixupLayoutEntries:(NSArray *) controls addLogicalPageName: (NSString *) logicalPageName returnMaskArray: (NSMutableArray *) maskItems {
     NSMutableArray *newControls = [controls mutableCopy];
     
     @try {
@@ -320,16 +326,26 @@
                     NSDictionary *position = (NSDictionary *) newEntry[@"position"];
                 
                     if (position != nil) {
-                        NSDictionary *currentState = (NSDictionary *) newEntry[@"currState"];
-                        NSString *text = @"";
-                        
-                        if (currentState != nil) {
-                            NSString *currentStateText = currentState[@"text"];
-                            if (currentStateText != nil) {
-                                text = currentStateText;
+                        // Use label as masking regex
+                        NSDictionary *accessibility = (NSDictionary *) newEntry[@"accessibility"];
+                        if (accessibility && accessibility[@"label"]) {
+                            
+                            bool masked = [self willMaskWithAccessibilityLabel:accessibility[@"label"] addLogicalPageName:logicalPageName];
+                            
+                            if (masked) {
+                                [maskItems addObject:@{@"position": position, @"text": @""}];
+                            } else {
+                                NSDictionary *currentState = (NSDictionary *) newEntry[@"currState"];
+                                NSString *text = @"";
+                                
+                                if (currentState != nil) {
+                                    NSString *currentStateText = currentState[@"text"];
+                                    if (currentStateText != nil) {
+                                        text = currentStateText;
+                                    }
+                                }
                             }
                         }
-                        [maskItems addObject:@{@"position": position, @"text": text}];
                     }
                 }
                 
@@ -398,7 +414,7 @@
             uv = uv.presentedViewController;
         }
 
-        NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
+//        NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
         NSString *name = (NSString *) [self checkForParameter:args withKey:@"name"];
         NSNumber *delay = 0;
         
@@ -436,6 +452,78 @@
 }
 
 
+- (NSArray *)retrieveMaskAccessibilityLabelListFromJSON:(NSDictionary *)inputJSON forLogicalPage:(NSString *)logicalPageName {
+    // Check if the input JSON exists and has the necessary structure
+    if (inputJSON && [inputJSON isKindOfClass:[NSDictionary class]]) {
+        // Check if the logicalPageName exists, if not, use "GlobalScreenSettings"
+        NSDictionary *pageSettings = inputJSON[logicalPageName] ?: inputJSON[@"GlobalScreenSettings"];
+        
+        // Check if "Masking" and "HasMasking" properties exist for the logicalPageName or default page
+        NSDictionary *masking = pageSettings[@"Masking"];
+        NSNumber *hasMasking = masking[@"HasMasking"];
+        if (masking && hasMasking && [hasMasking boolValue]) {
+            NSArray *maskAccessibilityLabelList = masking[@"MaskAccessibilityLabelList"];
+            
+            // Check if "MaskAccessibilityLabelList" exists and is an array
+            if (maskAccessibilityLabelList && [maskAccessibilityLabelList isKindOfClass:[NSArray class]]) {
+                return maskAccessibilityLabelList;
+            }
+        }
+    }
+    
+    // Return an empty array if the key doesn't exist or the structure is incorrect
+    return @[];
+}
+
+
+- (BOOL)willMaskWithAccessibilityLabel:(NSString*)label addLogicalPageName:(NSString *) logicalPageName {
+    EOApplicationHelper* helper = [[EOApplicationHelper sharedInstance] init];
+    NSArray      *accessibilityLabelArray;
+    
+    id returnedObject = [helper getConfigItem:@"AutoLayout" forModuleName:@"TLFCoreModule"];
+
+    // Casting the returned object to an NSDictionary
+    if ([returnedObject isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *item = (NSDictionary *)returnedObject;
+        
+        accessibilityLabelArray = [self retrieveMaskAccessibilityLabelListFromJSON:item forLogicalPage:logicalPageName];
+        
+    } else {
+        // Handle cases where the returned object is not an NSDictionary
+        NSLog(@"Returned object is not an NSDictionary.");
+    }
+    
+    
+    // Check if accessibilityLabelArray is available and not empty
+    if (accessibilityLabelArray && accessibilityLabelArray.count > 0) {
+        // Iterate through each regex pattern in accessibilityLabelArray
+        for(NSString *regstr in accessibilityLabelArray) {
+            // Create NSRegularExpression object from the regex pattern
+            NSError *error = nil;
+            NSRegularExpression *regExp = [NSRegularExpression regularExpressionWithPattern:regstr options:0 error:&error];
+            
+            // Handle error in regex creation, if any
+            if (error) {
+                NSLog(@"Error creating NSRegularExpression: %@", [error localizedDescription]);
+                continue;
+            }
+            
+            // Check if the given text matches the regex pattern
+            NSRange textRange = NSMakeRange(0, [label length]);
+            NSRange firstMatch = [regExp rangeOfFirstMatchInString:label options:0 range:textRange];
+            
+            // Return YES if there's a match, indicating masking is needed
+            if (firstMatch.location != NSNotFound) {
+                return YES;
+            }
+        }
+    }
+    
+    // Return NO if no match found or if accessibilityLabelArray is empty
+    return NO;
+}
+
+
 - (void) tlScreenviewAndLayout:(NSString *) screenViewType addRef:(NSString *) referrer addLayouts:(NSArray *) layouts addLogicalPageName: (NSString *) logicalPageName {
     if (referrer == nil) {
         referrer = @"none";
@@ -444,7 +532,7 @@
     UIImage *screenshot       = [self takeScreenShot];
     
     NSMutableArray *maskObjects = [@[] mutableCopy];
-    NSArray *updatedLayouts = [self fixupLayoutEntries:layouts returnMaskArray:maskObjects];
+    NSArray *updatedLayouts = [self fixupLayoutEntries:layouts addLogicalPageName: (NSString *) logicalPageName returnMaskArray:maskObjects];
     
     if ([maskObjects count] > 0 && screenshot != nil) {
         maskedScreenshot = [self maskImageWithObjects:screenshot withObjects:maskObjects];
@@ -469,7 +557,6 @@
     
     NSString *hash = tlImage == nil ? @"" : [tlImage getHash];
     NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
-//    NSString *screenName = [NSString stringWithFormat:@"FlutterViewController: %@", logicalPageName];
     
     NSMutableDictionary *screenContext = [@{
         @"screenview":@{
@@ -489,7 +576,6 @@
     _lastScreen = base64ImageString;
     
     // Now add the layout data
-    NSString *name = [NSString stringWithFormat:@"FlutterWidgetLayout-%@", hash];
     int      orientation = [self getOrientation];
     int      width = round(_screenWidth / _scale);
     int      height = round(_screenHeight / _scale);
@@ -608,58 +694,29 @@
 }
 
 - (void) tlScreenview: (NSDictionary *) args {
-    NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
-    NSString *logicalPageName = (NSString *) [self checkForParameter:args withKey:@"logicalPageName"];
-    NSObject *layouts   = args[@"layoutParameters"];
-    
-    if (layouts != nil) {
-        if ([layouts isKindOfClass:[NSArray class]]) {
-            NSLog(@"layoutParameters: %@", [layouts class]);
+    // Delay to ensure UI screen is fully rendered
+    double delayInSeconds = 0.5;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_main_queue(), ^{
+        // Code to be executed after a delay of 0.5 seconds (500 milliseconds)
+        NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
+        NSString *logicalPageName = (NSString *) [self checkForParameter:args withKey:@"logicalPageName"];
+        NSObject *layouts   = args[@"layoutParameters"];
+        
+        if (layouts != nil) {
+            if ([layouts isKindOfClass:[NSArray class]]) {
+                NSLog(@"layoutParameters: %@", [layouts class]);
+            }
+            else {
+                NSLog(@"Error in layout type");
+                layouts = nil;
+            }
         }
-        else {
-            NSLog(@"Error in layout type");
-            layouts = nil;
-        }
-    }
-    /*
-    TLFScreenViewType tlScreenViewType = ([tlType caseInsensitiveCompare:@"load"] == NSOrderedSame)
-        ? TLFScreenViewTypeLoad
-        : (([tlType caseInsensitiveCompare:@"unload"] == NSOrderedSame)
-           ? TLFScreenViewTypeUnload
-           : TLFScreenViewTypeVisit);
-    NSString *pageName  = [NSString stringWithFormat:@"Screenview pagename: %@", timestamp];
-     
-    [[TLFCustomEvent sharedInstance] logScreenViewContext:pageName applicationContext:tlScreenViewType referrer:nil];
-    [[TLFCustomEvent sharedInstance] logPrintScreenEvent];
-    */
-    [self tlScreenviewAndLayout:tlType addRef:nil addLayouts:(NSArray *)layouts addLogicalPageName:logicalPageName];
-    
-    /*
-    NSDictionary *data = @{@"item1": @"Data1", @"item2": @"Data2"};
-  
-    [[TLFCustomEvent sharedInstance] logEvent:@"My test Event!" values:data level:kTLFMonitoringLevelCellularAndWiFi];
-    
-    NSString *testJson = @"{\
-        \"fromWeb\": false,\
-        \"offset\": 1249,\
-        \"type\": 5,\
-        \"screenviewOffset\": 1222,\
-        \"customEvent\": {\
-            \"name\": \"My second test Event!\",\
-            \"data\": {\
-                \"value\": {\
-                    \"item1\": \"Data3\",\
-                    \"item2\": \"Data4\"\
-                }\
-            }\
-        }\
-    }";
-    [[TLFCustomEvent sharedInstance] logJSONMessagePayloadStr:testJson];
-    
-    [self alternateCustomEvent:@"A TEST custom event!" addData:data];
-    */
-    
-    NSLog(@"Screenview, tlType: %@", tlType);
+
+        [self tlScreenviewAndLayout:tlType addRef:nil addLayouts:(NSArray *)layouts addLogicalPageName:logicalPageName];
+        
+        NSLog(@"Screenview, tlType: %@", tlType);
+    });
 }
 
 - (void) tlPointerEvent: (NSDictionary *) args {
@@ -789,12 +846,12 @@ NSString *processString(NSString *inputString) {
             }
         }
         
-        // TODO: Need a screenshot for Gesture, will need optimiztion
-        UIImage *screenshot       = [self takeScreenShot];
-        CGSize screenSize = [UIScreen mainScreen].bounds.size;
-        TlImage *tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
-        NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
-        _lastScreen = base64ImageString;
+        // TODO: Need a screenshot for Gesture, will need optimiztion for masking
+//        UIImage *screenshot       = [self takeScreenShot];
+//        CGSize screenSize = [UIScreen mainScreen].bounds.size;
+//        TlImage *tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
+//        NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
+//        _lastScreen = base64ImageString;
         
         NSMutableDictionary *gestureMessage =[@{
             @"event": [@{
@@ -816,6 +873,28 @@ NSString *processString(NSString *inputString) {
         
         _lastDown = 0L;
         _lastMotionUpEvent = _firstMotionEvent = nil;
+    
+    } @catch (NSException *exception) {
+        NSLog(@"An exception occurred: %@", exception);
+    }
+}
+
+- (void) tlFocusChanged: (NSDictionary *) args {
+    @try {
+        NSString *wid = (NSString *) [self checkForParameter:args withKey:@"widgetId"];
+        NSString *focused = (NSString *) [self checkForParameter:args withKey:@"focused"];
+        NSString *type = [focused boolValue] ? @"OnFocusChange_In" : @"OnFocusChange_Out";
+        NSString *tlEvent = @"textChange";
+
+        NSDictionary *focusMessage = @{
+                @"event": @{
+                        @"tlType":  wid,
+                        @"type":    type,
+                        @"tlEvent": tlEvent
+                },
+        };
+
+        [self tlLogMessage:focusMessage addType: @4];
     
     } @catch (NSException *exception) {
         NSLog(@"An exception occurred: %@", exception);
@@ -880,6 +959,10 @@ NSString *processString(NSString *inputString) {
         }
         else if ([@"customEvent" caseInsensitiveCompare:call.method] == NSOrderedSame) {
             [self tlCustomEvent:call.arguments];
+            result(nil);
+        }
+        else if ([@"focuschanged" caseInsensitiveCompare:call.method] == NSOrderedSame) {
+            [self tlFocusChanged:call.arguments];
             result(nil);
         }
         else {

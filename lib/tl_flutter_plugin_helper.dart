@@ -401,54 +401,6 @@ class TlBinder extends WidgetsBindingObserver {
         }
       }
     }
-
-    final int currentTime = DateTime.now().millisecondsSinceEpoch;
-    final int elapsed = currentTime - lastFrameTime;
-    bool skippingFrame = false;
-
-    // if (logFrameTimer != null && logFrameTimer!.isActive) {
-    //   tlLogger.v(
-    //       'Cancelling screenview logging, frame interval, elapsed: $elapsed, start: $currentTime');
-    //   logFrameTimer!.cancel();
-    //   logFrameTimer = null;
-    //   skippingFrame = loggingScreen;
-    // } else {
-    //   // tlLogger.v(
-    //   //     'Logging screenview, no pending frame, frame interval: $elapsed, start: $currentTime, logging now: $loggingScreen');
-    // }
-    // final int waitTime =
-    //     (elapsed < rapidFrameRateLimitMs) ? rapidSequenceCompleteMs : 0;
-
-    /// Inline function
-    // void performScreenview() async {
-    //   loggingScreen = true;
-    //   logFrameTimer = null;
-    //   final int timerDelay =
-    //       DateTime.now().millisecondsSinceEpoch - currentTime;
-    //   final int frameInterval = lastFrameTime == 0 ? 0 : elapsed;
-    //   final List<Map<String, dynamic>> layouts = await getAllLayouts();
-
-    //   WidgetPath.clearPathCache();
-    //   await checkForScroll();
-    //   tlLogger.v(
-    //       'Logging screenview, delay: $timerDelay, wait: $waitTime, frame interval: $frameInterval, Layout count: ${layouts.length}');
-      
-    //   // TODO:  We don't want to keep logging screen here
-    //   // await PluginTealeaf.onScreenview("LOAD", timestamp, layouts);
-    //   loggingScreen = false;
-    // }
-
-    if (lastFrameTime == 0) {
-      tlLogger.v('Logging first frame');
-      // performScreenview();
-    } else if (skippingFrame) {
-      tlLogger.v('Logging screenview in process, skipping frame');
-    } else {
-      // tlLogger.v("Logging screenview, wait: $waitTime");
-      // logFrameTimer =
-      //     Timer(Duration(milliseconds: waitTime), performScreenview);
-    }
-    lastFrameTime = currentTime;
   }
 
   void handleWithPostFrameCallback(WidgetsBinding binding, Duration timestamp) {
@@ -689,6 +641,12 @@ class TlBinder extends WidgetsBindingObserver {
               left = eig.left;
               right = eig.right;
             }
+          }
+
+          if (subType.compareTo("TextField") == 0) {
+            var textField = widget as TextField;
+            var controller = textField.controller;
+            controller?.addListener(() { });
           }
 
           aStyle = {

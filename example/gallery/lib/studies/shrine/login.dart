@@ -120,7 +120,7 @@ class _UsernameTextField extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Semantics(
-      label: 'Tealeaf label',
+      label: 'username',
       child: TextField(
         textInputAction: TextInputAction.next,
         restorationId: 'username_text_field',

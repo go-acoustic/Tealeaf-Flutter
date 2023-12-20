@@ -19,15 +19,9 @@
           "smallCaseAlphabet": "x",
           "symbol": "#"
         },
-        "MaskIdList": [
-        ],
-        "MaskValueList": [
-        ],
         "MaskAccessibilityLabelList": [
-          "Home - Tealeaf masking Label",
-          "Shrine - Tealeaf masking label",
           "username",
-          "password"
+          "Shrine - Tealeaf masking label"
         ]
       }
     },

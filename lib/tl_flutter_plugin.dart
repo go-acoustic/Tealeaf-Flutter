@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:tl_flutter_plugin/tl_flutter_plugin_helper.dart';
 
@@ -86,16 +87,34 @@ class Tealeaf extends StatelessWidget {
 
             TealeafHelper.pointerEventHelper("UP", details);
 
-            var touchedTarget = findTouchedWidget(context, details.position);
-            debugPrint('The value of count is $details');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _logWidgetTree().then((result) async {
+                var touchedTarget =
+                    findTouchedWidget(context, details.position);
 
-            // Handle onTap gesture here
-            await PluginTealeaf.onTlGestureEvent(
-                gesture: "tap",
-                id: wp.widgetPath(),
-                target: touchedTarget,
-                data: null,
-                layoutParameters: TlBinder.layoutParametersForGestures);
+                // Handle onTap gesture and Pass the result to Tealeaf plugin
+                await PluginTealeaf.onTlGestureEvent(
+                    gesture: "tap",
+                    id: wp.widgetPath(),
+                    target: touchedTarget,
+                    data: null,
+                    layoutParameters: result);
+              }).catchError((error) {
+                // Handle errors if the async function throws an error
+                tlLogger.e('Error: $error');
+              });
+            });
+
+            // var touchedTarget = findTouchedWidget(context, details.position);
+            // debugPrint('The value of count is $details');
+
+            // // Handle onTap gesture here
+            // await PluginTealeaf.onTlGestureEvent(
+            //     gesture: "tap",
+            //     id: wp.widgetPath(),
+            //     target: touchedTarget,
+            //     data: null,
+            //     layoutParameters: TlBinder.layoutParametersForGestures);
           },
           onPointerDown: (details) {
             TealeafHelper.pointerEventHelper("DOWN", details);
@@ -184,7 +203,8 @@ class LoggingNavigatorObserver extends NavigatorObserver {
       // PluginTealeaf.logScreenLayout('LOAD', route.settings.name.toString());
 
       _logWidgetTree().then((result) {
-        PluginTealeaf.onScreenview("LOAD", route.settings.name.toString(), result);
+        PluginTealeaf.onScreenview(
+            "LOAD", route.settings.name.toString(), result);
       }).catchError((error) {
         // Handle errors if the async function throws an error
         tlLogger.e('Error: $error');
@@ -224,15 +244,15 @@ class LoggingNavigatorObserver extends NavigatorObserver {
 Future<List<Map<String, dynamic>>> _logWidgetTree() async {
   final completer = Completer<List<Map<String, dynamic>>>();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // ignore: deprecated_member_use
-    final element = WidgetsBinding.instance.renderViewElement;
+    // Wait for the microtask to complete after the frame rendering
+    await SchedulerBinding.instance.endOfFrame;
+
+    final element = WidgetsBinding.instance.rootElement;
     if (element != null) {
-      // Future.delayed(Duration(milliseconds: 1000), () {
-        completer.complete(_parseWidgetTree(element));
-      // });
+      completer.complete(_parseWidgetTree(element));
     } else {
       completer.completeError('Failed to retrieve the render view element');
     }
@@ -252,7 +272,7 @@ Future<List<Map<String, dynamic>>> _parseWidgetTree(Element element) async {
   /// All controls excluding the type 10 root node
   final List<Map<String, dynamic>> allControlsList = [];
 
-  Element parentElement;
+  // Element parentElement;
 
   try {
     // Recursively parse the widget tree
@@ -280,9 +300,8 @@ Future<List<Map<String, dynamic>>> _parseWidgetTree(Element element) async {
           widget is SnackBar ||
           widget is Image ||
           widget is Icon) {
-
         RenderBox? renderObject = element.renderObject as RenderBox?;
-        
+
         if (renderObject != null && renderObject.hasSize) {
           // Access properties or methods specific to RenderBox
 
@@ -443,7 +462,7 @@ Future<List<Map<String, dynamic>>> _parseWidgetTree(Element element) async {
 
         /// Skip invisible Widgets
         if (visible) {
-          parentElement = element;
+          // parentElement = element;
           // tlLogger.v('Parent widget - $parentElement.');
 
           traverse(child, depth + 1);
@@ -767,12 +786,10 @@ class PluginTealeaf {
   ///
   /// Throws a [TealeafException] if the provided `tlType` argument is not one of the allowed types
   /// or when the native platform throws a [PlatformException].
-  static Future<void> onScreenview(
-      String tlType, String logicalPageName,
+  static Future<void> onScreenview(String tlType, String logicalPageName,
       [List<Map<String, dynamic>>? layoutParameters]) async {
     try {
       if (["LOAD", "UNLOAD", "VISIT"].contains(tlType)) {
-
         // Send the screen view event to -the native side
         return await _channel.invokeMethod('screenview', <dynamic, dynamic>{
           'tlType': tlType,
@@ -816,6 +833,19 @@ class PluginTealeaf {
     tlLogger.v("Test NOT injected!");
     // If aspectd is working, we will inject replacement call with a return of 'true'
     return false;
+  }
+
+  static void tlFocusChanged(String widgetId, double x, double y, bool focused) async {
+    try {
+      await _channel.invokeMethod('focuschanged', <dynamic, dynamic>{
+        'widgetId': widgetId,
+        'x': x.toString(),
+        'y': y.toString(),
+        'focused': focused.toString()
+      });
+    } on PlatformException catch (pe) {
+      throw TealeafException(pe, msg: 'Unable to process focus change message!');
+    }
   }
 }
 

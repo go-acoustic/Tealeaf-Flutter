@@ -104,17 +104,6 @@ class Tealeaf extends StatelessWidget {
                 tlLogger.e('Error: $error');
               });
             });
-
-            // var touchedTarget = findTouchedWidget(context, details.position);
-            // debugPrint('The value of count is $details');
-
-            // // Handle onTap gesture here
-            // await PluginTealeaf.onTlGestureEvent(
-            //     gesture: "tap",
-            //     id: wp.widgetPath(),
-            //     target: touchedTarget,
-            //     data: null,
-            //     layoutParameters: TlBinder.layoutParametersForGestures);
           },
           onPointerDown: (details) {
             TealeafHelper.pointerEventHelper("DOWN", details);

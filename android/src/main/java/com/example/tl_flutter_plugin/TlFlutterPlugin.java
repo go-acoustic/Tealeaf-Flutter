@@ -137,8 +137,8 @@ class ScreenUtil {
         final Bitmap[] bitmap = new Bitmap[1];
         final CountDownLatch latch = new CountDownLatch(1);
 
-        // Ensure there's delay to allow async to finish drawing on the screen
-        Thread.sleep(500);
+        // Ensure there's delay to allow async to finish drawing on the screen.  0 delay for Gesture.
+        Thread.sleep(GestureUtil.isFlutterGestureEvent ? 0 : 500 );
 
         activity.runOnUiThread(() -> {
             view.setDrawingCacheEnabled(true);
@@ -529,6 +529,8 @@ class ScreenUtil {
 }
 
 class GestureUtil {
+    static boolean isFlutterGestureEvent;
+
     static GestureControl createGestureControl(Activity activity, float x, float y) {
         final View rootView = activity.getWindow().getDecorView();
         final ArrayList<Object> viewItems = getViewByXY(rootView, x, y);
@@ -715,6 +717,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     private long lastDown = -1L;
     private String lastPage = "";
     private Image lastPageImage = null;
+
     // TBD: Do we need to compare screens on gesture events?
     // private Bitmap lastRawScreen = null;
 
@@ -907,7 +910,6 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                         return;
                     }
                     tlScreenviewMessage(args);
-//                    logScreenLayout(args);
                     result.success(true);
                     break;
                 }
@@ -916,7 +918,6 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                         result.error(NO_ARGS, "screenview event requires arguments list", getStackTraceAsString());
                         return;
                     }
-//                     tlScreenviewMessage(args);
                     logScreenLayout(args);
                     result.success(true);
                     break;
@@ -1072,52 +1073,51 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         }
 
         final String lastPage = this.lastPage;
+        GestureUtil.isFlutterGestureEvent = true;
 
-        _executorPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final String tlType = checkForParameter(args, "tlType");
-                    final List<HashMap<String, Object>> widgetLayouts = checkForParameter(args, "layoutParameters");
+        _executorPool.execute(() -> {
+            try {
+                final String tlType = checkForParameter(args, "tlType");
+                final List<HashMap<String, Object>> widgetLayouts = checkForParameter(args, "layoutParameters");
+                final Layout layout = new Layout();
+                final Bitmap screenBitmap = screenSnapshot(getActivity(), renderer);
 
-                    LOGGER.log(Level.INFO, "Tealeaf message gesture event: " + "tlType: " + tlType + ", page: " +
-                            lastPage + ", last pointer event was up event: " + (lastPointerEvent == lastPointerUpEvent));
+                LOGGER.log(Level.INFO, "Tealeaf message gesture event: " + "tlType: " + tlType + ", page: " +
+                        lastPage + ", last pointer event was up event: " + (lastPointerEvent == lastPointerUpEvent));
 
-                    /* Keep in case we need to take snapshot */
-                    final List<Position> maskedPositions = new ArrayList<>();
+                /* Keep in case we need to take snapshot */
+                final List<Position> maskedPositions = new ArrayList<>();
 
-                    for (HashMap<String, Object> wLayout : widgetLayouts) {
-                        final Position position = ScreenUtil.getPositionFromLayout(wLayout);
+                for (HashMap<String, Object> wLayout : widgetLayouts) {
+                    final Position position = ScreenUtil.getPositionFromLayout(wLayout);
 
-                        if (position.getLabel() != null) {
-                            maskedPositions.add(position);
-                        }
+                    if (position.getLabel() != null) {
+                        maskedPositions.add(position);
                     }
-
-                    if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
-                        final Activity activity = getActivity();
-
-                          /*
-                          final Bitmap screenBitmap = ScreenUtil.screenSnapshot(activity, renderer);
-                          LOGGER.log(Level.INFO, "GESTURE: screen same?: " + screenBitmap.sameAs(lastRawScreen));
-                          */
-                        if (FLUTTER_GESTURE_EVENT) {
-                            //final byte[] imageBytes = ScreenUtil.takeSnapshotAndCompress(activity, getRenderer(), maskedPositions);
-
-                            if (Tealeaf.getGesturePlaceHolder().size() > 0) {
-                                Tealeaf.getGesturePlaceHolder().take(); // Remove placeholder (not needed?)
-                            }
-                            logGestureEvent(activity, tlType, args, EOCore.getDefaultLogLevel());
-                            lastPointerEvent = null;
-                        } else {
-                            Tealeaf.logGestureEvent(activity, motionEvent(), tlType, lastPage);
-                        }
-                    }
-                } catch (final Exception e) {
-                    com.tl.uic.util.LogInternal.logException(e, "Tealeaf plugin error:  Trying to log screenview.");
-                } finally {
-
                 }
+
+                if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
+                    final Activity activity = getActivity();
+
+                    if (FLUTTER_GESTURE_EVENT) {
+                        //final byte[] imageBytes = ScreenUtil.takeSnapshotAndCompress(activity, getRenderer(), maskedPositions);
+                        ScreenUtil.setControls(layout, widgetLayouts, scaleWidth, scaleHeight, maskedPositions);
+
+                        ScreenUtil.obscureAndCompress(screenBitmap, maskedPositions);
+
+                        if (Tealeaf.getGesturePlaceHolder().size() > 0) {
+                            Tealeaf.getGesturePlaceHolder().take(); // Remove placeholder (not needed?)
+                        }
+                        logGestureEvent(activity, tlType, args, EOCore.getDefaultLogLevel());
+                        lastPointerEvent = null;
+                    } else {
+                        Tealeaf.logGestureEvent(activity, motionEvent(), tlType, lastPage);
+                    }
+                }
+            } catch (final Exception e) {
+                com.tl.uic.util.LogInternal.logException(e, "Tealeaf plugin error:  Trying to log screenview.");
+            } finally {
+                GestureUtil.isFlutterGestureEvent = false;
             }
         });
         return cdl;

@@ -22,8 +22,6 @@ class Tealeaf extends StatelessWidget {
   /// Use as reference time to calculate widget load time
   static int startTime = DateTime.now().millisecondsSinceEpoch;
 
-  static bool showDebugLog = false;
-
   // Create an instance of LoggingNavigatorObserver
   static final LoggingNavigatorObserver loggingNavigatorObserver =
       LoggingNavigatorObserver();
@@ -35,9 +33,8 @@ class Tealeaf extends StatelessWidget {
       : rootWidget = child,
         super(key: key);
 
-  static void init(bool printLog) {
+  static void init() {
     startTime = DateTime.now().millisecondsSinceEpoch;
-    showDebugLog = printLog;
 
     /// Handles screen layout data, and Gesture events
     TlBinder().init();
@@ -51,6 +48,7 @@ class Tealeaf extends StatelessWidget {
 
     tlLogger.v(
         'GestureDetector Build WIDGET: ${widget.runtimeType.toString()} ${widget.hashCode}');
+
     final WidgetPath wp = WidgetPath.create(context, hash: true);
     wp.addInstance(widget.hashCode);
     wp.addParameters(<String, dynamic>{'type': widget.runtimeType.toString()});
@@ -88,7 +86,7 @@ class Tealeaf extends StatelessWidget {
             TealeafHelper.pointerEventHelper("UP", details);
 
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _logWidgetTree().then((result) async {
+              logWidgetTree().then((result) async {
                 var touchedTarget =
                     findTouchedWidget(context, details.position);
 
@@ -184,20 +182,12 @@ class LoggingNavigatorObserver extends NavigatorObserver {
   /// The `previousRoute` parameter represents the route that was previously on top of the navigator.
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    // final startTime = DateTime.now().millisecondsSinceEpoch;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final endTime = DateTime.now().millisecondsSinceEpoch;
       final int duration = endTime - Tealeaf.startTime;
 
-      // PluginTealeaf.logScreenLayout('LOAD', route.settings.name.toString());
-
-      _logWidgetTree().then((result) {
-        PluginTealeaf.onScreenview(
-            "LOAD", route.settings.name.toString(), result);
-      }).catchError((error) {
-        // Handle errors if the async function throws an error
-        tlLogger.e('Error: $error');
-      });
+      /// Calls Tealeaf plugin
+      PluginTealeaf.logScreenLayout(route.settings.name.toString());
 
       tlLogger
           .v('PluginTealeaf.logScreenLayout - Pushed ${route.settings.name}');
@@ -230,7 +220,7 @@ class LoggingNavigatorObserver extends NavigatorObserver {
 ///
 /// Log tree from current screen frame.
 ///
-Future<List<Map<String, dynamic>>> _logWidgetTree() async {
+Future<List<Map<String, dynamic>>> logWidgetTree() async {
   final completer = Completer<List<Map<String, dynamic>>>();
 
   WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -241,7 +231,7 @@ Future<List<Map<String, dynamic>>> _logWidgetTree() async {
 
     final element = WidgetsBinding.instance.rootElement;
     if (element != null) {
-      completer.complete(_parseWidgetTree(element));
+      completer.complete(parseWidgetTree(element));
     } else {
       completer.completeError('Failed to retrieve the render view element');
     }
@@ -253,7 +243,7 @@ Future<List<Map<String, dynamic>>> _logWidgetTree() async {
 /// Parses the Flutter widget tree and returns a list of widget data maps.
 ///
 /// [element]: The root element of the widget tree to parse.
-Future<List<Map<String, dynamic>>> _parseWidgetTree(Element element) async {
+Future<List<Map<String, dynamic>>> parseWidgetTree(Element element) async {
   final widgetTree = <Map<String, dynamic>>[];
   final List<AccessiblePosition?> accessiblePositionList = [];
   AccessiblePosition? accessibility;
@@ -615,26 +605,51 @@ class PluginTealeaf {
     }
   }
 
-  /// Sends a custom event to the TeaLeaf platform.
+  /// Logs a custom event with optional custom data and log level.
   ///
-  /// [eventName]: The name of the custom event.
-  /// [customData]: Optional custom data associated with the event.
-  /// [logLevel]: Optional log level for the event, where 0 is the lowest and 7 is the highest.
-  static Future<void> tlApplicationCustomEvent(
-      {required String? eventName,
-      Map<String, String?>? customData,
-      int? logLevel}) async {
+  /// This function sends a custom event message to the native side with the specified
+  /// event name, custom data, and log level. It uses platform-specific channel
+  /// communication to invoke the 'customevent' method.
+  ///
+  /// Throws a [TealeafException] if there is an error during the process,
+  /// including if there is an issue with the Tealeaf plugin or platform-specific errors.
+  ///
+  /// Example usage:
+  /// ```dart
+  /// await tlApplicationCustomEvent(
+  ///   eventName: 'ButtonClicked',
+  ///   customData: {'buttonName': 'Submit'},
+  ///   logLevel: 2,
+  /// );
+  /// ```
+  ///
+  /// Parameters:
+  /// - [eventName]: The name of the custom event.
+  /// - [customData]: A map containing additional custom data for the event (optional).
+  /// - [logLevel]: The log level for the custom event (optional).
+  ///
+  /// Throws:
+  /// - [TealeafException]: If there is an issue processing the custom event message.
+  static Future<void> tlApplicationCustomEvent({
+    required String? eventName,
+    Map<String, String?>? customData,
+    int? logLevel,
+  }) async {
     if (eventName == null) {
       throw TealeafException.create(code: 6, msg: 'eventName is null');
     }
     try {
-      await _channel.invokeMethod('customevent',
-          {'eventname': eventName, 'loglevel': logLevel, 'data': customData});
+      await _channel.invokeMethod('customevent', {
+        'eventname': eventName,
+        'loglevel': logLevel,
+        'data': customData,
+      });
     } on PlatformException catch (pe) {
       throw TealeafException(pe,
           msg: 'Unable to process custom event message!');
     }
   }
+
 
   ///
   /// For Application level handled exception
@@ -720,35 +735,59 @@ class PluginTealeaf {
     }
   }
 
-  /// Logs a screen layout event to the app. The event can be a load, unload, or visit event.
+  /// Logs the layout of the screen and captures a Tealeaf screen view event.
   ///
-  /// The `tlType` argument should be a string representing the type of screen transition:
-  /// - "LOAD" for when the screen is being loaded,
-  /// - "UNLOAD" for when the screen is being unloaded,
-  /// - "VISIT" for when the screen is visited.
+  /// This function logs the widgets on the screen using the [logWidgetTree] function
+  /// and then calls the Tealeaf screen capture API to capture the screen load event.
+  /// The captured event includes the logical page name provided as [logicalPageName].
   ///
-  /// The `name` argument is the name of the screen that is being transitioned to/from.
+  /// Throws a [TealeafException] if there is an error during the process,
+  /// including if there is an issue with the Tealeaf plugin or platform-specific errors.
   ///
-  /// Throws a [TealeafException] if the provided `tlType` argument is not one of the allowed types
-  /// or when the native platform throws a [PlatformException].
-  static Future<void> logScreenLayout(String tlType, String name) async {
+  /// Example usage:
+  /// ```dart
+  /// await logScreenLayout('HomePage');
+  /// ```
+  ///
+  /// Parameters:
+  /// - [logicalPageName]: The logical name of the page/screen to be used in the Tealeaf event.
+  ///
+  /// Throws:
+  /// - [TealeafException]: If there is an issue processing the screen capture.
+  static Future<void> logScreenLayout(String logicalPageName) async {
     try {
-      if (["LOAD", "UNLOAD", "VISIT"].contains(tlType)) {
-        // final String timeString = timestamp.inMicroseconds.toString();
-
-        // Send the screen view event to the native side
-        return await _channel.invokeMethod('logScreenLayout',
-            <dynamic, dynamic>{'tlType': tlType, 'name': name});
-      }
-
-      throw TealeafException.create(
-          code: 2, msg: 'Illegal screenview transition type');
+      /// First logs the screen widgets, then call Tealeaf screen capture API
+      logWidgetTree().then((result) {
+        /// Captures screen load event, with page name
+        PluginTealeaf.onScreenview("LOAD", logicalPageName, result);
+      }).catchError((error) {
+        tlLogger.e('Error: $error');
+      });
     } on PlatformException catch (pe) {
-      throw TealeafException(pe,
-          msg: 'Unable to process screen view (update) message!');
+      throw TealeafException(pe, msg: 'Unable to process screen capture');
     }
   }
 
+  /// Logs the unloading context of a screen view with additional information.
+  ///
+  /// This function sends a screen view unload event to the native side with the
+  /// logical page name and referrer information. It uses platform-specific channel
+  /// communication to invoke the 'logScreenViewContextUnLoad' method.
+  ///
+  /// Throws a [TealeafException] if there is an error during the process,
+  /// including if there is an issue with the Tealeaf plugin or platform-specific errors.
+  ///
+  /// Example usage:
+  /// ```dart
+  /// await logScreenViewContextUnLoad('DetailsPage', 'HomePage');
+  /// ```
+  ///
+  /// Parameters:
+  /// - [logicalPageName]: The logical name of the page/screen for the screen view event.
+  /// - [referrer]: The logical name of the referring page/screen for context information.
+  ///
+  /// Throws:
+  /// - [TealeafException]: If there is an issue processing the logScreenViewContextUnLoad message.
   static Future<void> logScreenViewContextUnLoad(
       String logicalPageName, String referrer) async {
     try {
@@ -824,7 +863,8 @@ class PluginTealeaf {
     return false;
   }
 
-  static void tlFocusChanged(String widgetId, double x, double y, bool focused) async {
+  static void tlFocusChanged(
+      String widgetId, double x, double y, bool focused) async {
     try {
       await _channel.invokeMethod('focuschanged', <dynamic, dynamic>{
         'widgetId': widgetId,
@@ -833,7 +873,8 @@ class PluginTealeaf {
         'focused': focused.toString()
       });
     } on PlatformException catch (pe) {
-      throw TealeafException(pe, msg: 'Unable to process focus change message!');
+      throw TealeafException(pe,
+          msg: 'Unable to process focus change message!');
     }
   }
 }

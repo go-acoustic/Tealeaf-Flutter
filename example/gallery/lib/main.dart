@@ -44,9 +44,6 @@ void main() async {
     };
   }
 
-  // Init Tealeaf plugin, show/hide print log
-  Tealeaf.init(true);
-
   ///
   /// Add Tealeaf Wrapper for auto instrumentation
   ///

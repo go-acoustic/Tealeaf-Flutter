@@ -22,6 +22,9 @@ class Tealeaf extends StatelessWidget {
   /// Use as reference time to calculate widget load time
   static int startTime = DateTime.now().millisecondsSinceEpoch;
 
+  static bool isSwiping = false;
+
+
   // Create an instance of LoggingNavigatorObserver
   static final LoggingNavigatorObserver loggingNavigatorObserver =
       LoggingNavigatorObserver();
@@ -40,8 +43,13 @@ class Tealeaf extends StatelessWidget {
     TlBinder().init();
   }
 
+  static bool getIsSwiping() {
+    return isSwiping;
+  }
+
   @override
   Widget build(BuildContext context) {
+    init();
     UserInteractionLogger.initialize();
 
     Widget? widget = context.widget;
@@ -78,14 +86,16 @@ class Tealeaf extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         child: Listener(
-          onPointerUp: (details) async {
-            // Handle onPointerUp event here
-            // Start time as reference when there's navigation change
-            Tealeaf.startTime = DateTime.now().millisecondsSinceEpoch;
-
+          onPointerUp: (details) {
             TealeafHelper.pointerEventHelper("UP", details);
 
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+            tlLogger.v("Is swiping? ${getIsSwiping()}");
+
+            if (!getIsSwiping()) {
+              // Handle onPointerUp event here
+              // Start time as reference when there's navigation change
+              Tealeaf.startTime = DateTime.now().millisecondsSinceEpoch;
+
               logWidgetTree().then((result) async {
                 var touchedTarget =
                     findTouchedWidget(context, details.position);
@@ -101,12 +111,16 @@ class Tealeaf extends StatelessWidget {
                 // Handle errors if the async function throws an error
                 tlLogger.e('Error: $error');
               });
-            });
+
+              Tealeaf.isSwiping = false;
+            }
           },
           onPointerDown: (details) {
             TealeafHelper.pointerEventHelper("DOWN", details);
           },
           onPointerMove: (details) {
+            tlLogger.v("Gesture move, swipe event checkForScroll() will fire..");
+            Tealeaf.isSwiping = true;
             TealeafHelper.pointerEventHelper("MOVE", details);
           },
           child: child,

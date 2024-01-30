@@ -291,6 +291,9 @@ class TlBinder extends WidgetsBindingObserver {
     scrollCapture?.velocity =
         velocity ?? Velocity(pixelsPerSecond: Offset(0, 0));
     scrollCapture?.calculateSwipe();
+
+    Tealeaf.isSwiping = false;
+    checkForScroll();
   }
 
   Future<void> checkForScroll() async {
@@ -310,28 +313,35 @@ class TlBinder extends WidgetsBindingObserver {
         tlLogger.v(
             'Scrollable, start: ${start?.dx},${start?.dy}, end: ${end?.dx},${end?.dy}, velocity: $velocity, direction: $direction');
 
-        await PluginTealeaf.onTlGestureEvent(
-            gesture: 'swipe',
-            id: '../Scrollable',
-            target: 'Scrollable',
-            data: <String, dynamic>{
-              'pointer1': {
-                'dx': start?.dx,
-                'dy': start?.dy,
-                'ts': swipe.getStartTimestampString()
+        logWidgetTree().then((result) async {
+          // TODO: missing context?
+          // var touchedTarget = findTouchedWidget(context, details.position);
+          await PluginTealeaf.onTlGestureEvent(
+              gesture: 'swipe',
+              id: '../Scrollable',
+              target: 'Scrollable',
+              data: <String, dynamic>{
+                'pointer1': {
+                  'dx': start?.dx,
+                  'dy': start?.dy,
+                  'ts': swipe.getStartTimestampString()
+                },
+                'pointer2': {
+                  'dx': end?.dx,
+                  'dy': end?.dy,
+                  'ts': swipe.getUpdateTimestampString()
+                },
+                'velocity': {
+                  'dx': velocity?.pixelsPerSecond.dx,
+                  'dy': velocity?.pixelsPerSecond.dy
+                },
+                'direction': direction,
               },
-              'pointer2': {
-                'dx': end?.dx,
-                'dy': end?.dy,
-                'ts': swipe.getUpdateTimestampString()
-              },
-              'velocity': {
-                'dx': velocity?.pixelsPerSecond.dx,
-                'dy': velocity?.pixelsPerSecond.dy
-              },
-              'direction': direction,
-            },
-            layoutParameters: TlBinder.layoutParametersForGestures);
+              layoutParameters: result);
+        }).catchError((error) {
+          // Handle errors if the async function throws an error
+          tlLogger.e('Error: $error');
+        });
       } else {
         tlLogger.v('Incomplete scroll before frame');
       }

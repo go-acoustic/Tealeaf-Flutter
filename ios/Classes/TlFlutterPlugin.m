@@ -4,6 +4,11 @@
 
 #import <EOCore/EOApplicationHelper.h>
 
+/**
+ * TlFlutterPlugin
+ *
+ * Integrates Tealeaf analytics and monitoring capabilities into Flutter apps.
+ */
 @implementation TlFlutterPlugin {
     NSInteger _screenWidth;
     NSInteger _screenHeight;
@@ -24,6 +29,11 @@
     long _lastDown;
 }
 
+/**
+ Registers the TlFlutterPlugin with the Flutter plugin registrar, creating a communication channel between Flutter and native code.
+
+ @param registrar An object conforming to the FlutterPluginRegistrar protocol.
+ */
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
     FlutterMethodChannel* channel = [FlutterMethodChannel
         methodChannelWithName:@"tl_flutter_plugin" binaryMessenger:[registrar messenger]];
@@ -31,6 +41,11 @@
     [registrar addMethodCallDelegate:instance channel:channel];
 }
 
+/**
+ Initializes the TlFlutterPlugin instance, configuring Tealeaf integration and handling image-related settings.
+
+ @return An instance of TlFlutterPlugin.
+ */
 - (id) init {
     self = [super init];
     _screenWidth  = -1;
@@ -746,11 +761,14 @@ NSString *processString(NSString *inputString) {
     return nil;
 }
 
+
 - (void) tlGestureEvent: (NSDictionary *) args {
     @try {
         NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
         NSString *wid    = (NSString *) [self checkForParameter:args withKey:@"id"];
         NSString *target = (NSString *) [self checkForParameter:args withKey:@"target"];
+        NSObject *layouts   = args[@"layoutParameters"];
+
         BOOL     isSwipe = [tlType isEqualToString:@"swipe"];
         BOOL     isPinch = [tlType isEqualToString:@"pinch"];
         
@@ -764,6 +782,40 @@ NSString *processString(NSString *inputString) {
         if (data != (NSDictionary *) [NSNull null]) {
             accessibility = data[@"accessibility"];
         }
+        
+        // New screenshot needed
+        UIImage *maskedScreenshot = nil;
+        UIImage *screenshot       = [self takeScreenShot];
+        
+        NSMutableArray *maskObjects = [@[] mutableCopy];
+        
+        NSString *logicalPageName = @"";
+        [self fixupLayoutEntries:(NSArray *)layouts addLogicalPageName: (NSString *) logicalPageName returnMaskArray:maskObjects];
+        
+        if ([maskObjects count] > 0 && screenshot != nil) {
+            maskedScreenshot = [self maskImageWithObjects:screenshot withObjects:maskObjects];
+        }
+        if (screenshot == nil) {
+            screenshot = [UIImage imageNamed:@""];
+        }
+        CGSize screenSize = [UIScreen mainScreen].bounds.size;
+        TlImage *tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
+        
+        if (maskedScreenshot != nil) {
+            [tlImage updateWithImage:maskedScreenshot];
+        }
+        
+        NSString *originalHash = [tlImage getOriginalHash];
+        
+        if ([_lastHash isEqualToString:originalHash]) {
+            NSLog(@"Not logging screenview as unmasked screen has not updated, hash: %@", originalHash);
+            return;
+        }
+        _lastHash = originalHash;
+        
+        NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
+        
+        _lastScreen = base64ImageString.length > 0 ? base64ImageString : _lastScreen;
 
         if (isPinch || isSwipe) {
             PointerEvent *pointerEvent1, *pointerEvent2;
@@ -794,7 +846,7 @@ NSString *processString(NSString *inputString) {
             }
         }
         else {
-            [pointerEvents addObject:_lastMotionUpEvent];
+            [pointerEvents addObject:_lastMotionUpEvent != nil ? _lastMotionUpEvent : @"Tap"];
         }
         
         NSMutableArray *touches = [[NSMutableArray alloc] init];
@@ -856,7 +908,7 @@ NSString *processString(NSString *inputString) {
         NSMutableDictionary *gestureMessage =[@{
             @"event": [@{
                 // TBD: Need to check: Should this mimic Android version? Verify correctness for Pinch "type"
-                @"type":    isPinch ? @"onScale" : _lastMotionUpEvent.action,
+                @"type":    isPinch ? @"onScale" : _lastMotionUpEvent != nil ? _lastMotionUpEvent.action : @"Tap",
                 @"tlEvent": tlType
             } mutableCopy],
             @"touches": touches,

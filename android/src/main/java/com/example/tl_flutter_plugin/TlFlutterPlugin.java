@@ -459,11 +459,10 @@ class ScreenUtil {
 
     static void logLayout(Activity activity, String currentName, Layout layout, byte[] imageBytes) {
         if (activity != null && activity.getWindow() != null) {
-//      Activity wholeActivity = CommonUtil.getRootActivity(activity);
             String className = activity.getLocalClassName();
             final View view = activity.getWindow().getDecorView();
 
-            final String currentLayoutName = currentName + "-layout"; // TBD -- Always non-empty name
+            final String currentLayoutName = currentName;
 
             try {
                 saveScreenImage(currentName, imageBytes);
@@ -1057,8 +1056,8 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     // }
 
     /**
-     * @param args
-     * @return
+     * @param args Flutter app Gesture event, and its screen meta data.
+     * @return CountDownlatch Used for testing.
      */
     CountDownLatch tlGestureMessage(Object args) {
         final CountDownLatch cdl = new CountDownLatch(1);

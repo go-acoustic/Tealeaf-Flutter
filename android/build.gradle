@@ -21,6 +21,7 @@ rootProject.allprojects {
         mavenCentral()
         // Tealeaf staging repo
         // maven { url "https://s01.oss.sonatype.org/content/groups/staging" }
+        maven { url "https://s01.oss.sonatype.org/content/repositories/staging" }
 
     }
 }
@@ -29,7 +30,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 33
+    compileSdk 33
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -42,11 +43,11 @@ android {
 }
 
 dependencies {
-   implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+//    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
     implementation 'androidx.appcompat:appcompat:1.6.1'
 
-    implementation "io.github.acoustic-analytics:eocore:+"
-    // api "io.github.acoustic-analytics:tealeaf:+"
-    api files('libs/tealeafmod.jar')
+    api "io.github.acoustic-analytics:tealeaf:10.3.359"
+    implementation "io.github.acoustic-analytics:eocore:2.0.343"
+//    api files('libs/tealeafmod.jar')
     // api files('libs/tealeafMod-release.aar')
 }

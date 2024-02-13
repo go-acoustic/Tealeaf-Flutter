@@ -24,6 +24,6 @@ Run the Flutter Tealeaf Automation CLI script following these steps:
    ```shell
    dart run $HOME/tealeaf_cli/bin/tealeaf_cli.dart
    ```
-6. Open your iOS project in Xcode.
+<!-- 6. Open your iOS project in Xcode.
    1. In the project navigator, right click on the **Runner** folder and select: **Add filles to "Runner"...**.
-   2. Select _main.swift_ and _TealeafApplication.swift_ and click on **Add**.
+   2. Select _main.swift_ and _TealeafApplication.swift_ and click on **Add**. -->

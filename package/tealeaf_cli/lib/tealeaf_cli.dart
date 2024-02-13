@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:dcli/dcli.dart';
+import 'package:tealeaf_cli/setup_mobile_platforms.dart';
 import 'package:yaml/yaml.dart';
 import 'models/basic_config_model.dart';
+import 'update_config.dart';
 
 String getPluginPath(String currentProjectDir) {
   String pluginName = "tl_flutter_plugin";
@@ -19,19 +21,38 @@ String getPluginPath(String currentProjectDir) {
 }
 
 setupMobilePlatforms(String pluginRoot, String currentProjectDir) {
-  "bash $pluginRoot/automation/setupMobilePlatforms.sh $pluginRoot $currentProjectDir"
-      .run;
+  SetupMobilePlatforms setupMobilePlatforms = SetupMobilePlatforms();
+  setupMobilePlatforms.run(pluginRoot, currentProjectDir);
 }
 
-setupJsonConfig(String pluginRoot, String currentProjectDir) {
+void setupJsonConfig(String pluginRoot, String currentProjectDir, String appKey,
+    String postMessageUrl) {
   var template = "$pluginRoot/automation/TealeafConfig.json";
   var file = "$currentProjectDir/TealeafConfig.json";
-  if (exists(file)) {
-    stdout.writeln('TealeafConfig found in your project. You are ready to go!');
-  } else {
-    "cp $template $file".run;
+  // Ensure the file exists by copying the template first
+  if (!File(file).existsSync()) {
+    File(template).copySync(file);
     stdout.writeln("$template was copied to $file");
   }
+
+  // Now update the TealeafConfig.json file with AppKey and PostMessageUrl
+  updateTealeafConfig(file, appKey, postMessageUrl);
+  stdout.writeln(
+      'TealeafConfig updated with your project settings. You are ready to go!');
+}
+
+void updateTealeafConfig(
+    String filePath, String appKey, String postMessageUrl) {
+  var tealeafConfig = File(filePath);
+  var configContent = tealeafConfig.readAsStringSync();
+
+  // Use a more flexible way to replace the values
+  var updatedConfig = configContent
+      .replaceAll(RegExp(r'"AppKey":\s*".*?"'), '"AppKey": "$appKey"')
+      .replaceAll(RegExp(r'"PostMessageUrl":\s*".*?"'),
+          '"PostMessageUrl": "$postMessageUrl"');
+
+  tealeafConfig.writeAsStringSync(updatedConfig);
 }
 
 updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
@@ -76,6 +97,6 @@ updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
 updateBasicConfig(
     String pluginRoot, String currentProjectDir, String key, dynamic value) {
   String valueType = value.runtimeType.toString();
-  "bash $pluginRoot/automation/updateConfig.sh  $currentProjectDir $key $value $valueType"
-      .run;
+
+  updateConfig(currentProjectDir, key, value, valueType);
 }

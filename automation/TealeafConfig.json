@@ -1,8 +1,12 @@
 {
     "Tealeaf": {
-        "AppKey": "<YOUR_APP_KEY>",
-        "PostMessageUrl": "<YOUR_POST_MESSAGE_URL>",
-        "KillSwitchUrl": "<YOUR_KILLSWITCH_URL>",
+        "AppKey": "<AppKey>",
+        "PostMessageUrl": "<PostMessageUrl>",
+        "KillSwitchUrl": "<KillSwitchUrl>",
+        "useRelease":"<false/true>",
+        "iOSVersion":"<>",
+        "AndroidEOCoreVersion": "<>",
+        "AndroidTealeafVersion": "<>",
         "layoutConfig": {
         "AutoLayout": {
           "GlobalScreenSettings": {
@@ -24,12 +28,10 @@
               "smallCaseAlphabet": "x",
               "symbol": "#"
             },
-            "MaskIdList": [
-            "c108736d43875b0e6231c09535149ffffe9732de",
-            "textView1",
-            "login.password",
-            "editText"],
-            "MaskValueList": []
+            "MaskAccessibilityLabelList": [
+              "username",
+              "Shrine - Tealeaf masking label"
+            ]
           }
         }
       },

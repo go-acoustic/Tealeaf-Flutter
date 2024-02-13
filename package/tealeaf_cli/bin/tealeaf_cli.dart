@@ -7,17 +7,34 @@ import 'package:dcli/dcli.dart';
 void main(List<String> arguments) async {
   bool debug = false;
   Settings().setVerbose(enabled: debug);
+
+  String appKey = "";
+  String postmessageURL = "";
+
+  if (arguments.length == 2) {
+    appKey = arguments[0];
+    postmessageURL = arguments[1];
+
+    print(appKey);
+    print(postmessageURL);
+  }
+
+  // For test only
+  // String currentProjectDir =
+  //     "/Users/changjieyang/developer/Acoustic/TL-Flutter-Plugin/example/gallery";
+
   String currentProjectDir = Directory.current.path;
   String pluginRoot = tealeaf_cli.getPluginPath(currentProjectDir);
   stdout.writeln('tealeaf_cli working...');
 
-  // Setup mobile platforms
+  // // Setup mobile platforms
   stdout.writeln('Setup mobile platforms');
   tealeaf_cli.setupMobilePlatforms(pluginRoot, currentProjectDir);
 
-  // Setup TealeafConfig.json
+  // // Setup TealeafConfig.json
   stdout.writeln('Setup TealeafConfig.json');
-  tealeaf_cli.setupJsonConfig(pluginRoot, currentProjectDir);
+  tealeaf_cli.setupJsonConfig(
+      pluginRoot, currentProjectDir, appKey, postmessageURL);
 
   // Update config
   var input = File("$currentProjectDir/TealeafConfig.json").readAsStringSync();
@@ -28,6 +45,13 @@ void main(List<String> arguments) async {
 
   basicConfig.tealeaf!.toJson().forEach((key, value) async {
     if (key != "layoutConfig") {
+      if (key == "AppKey" && appKey != "") {
+        value = appKey;
+      }
+      if (key == "PostMessageUrl" && postmessageURL != "") {
+        value = postmessageURL;
+      }
+
       tealeaf_cli.updateBasicConfig(pluginRoot, currentProjectDir, key, value);
     }
   });

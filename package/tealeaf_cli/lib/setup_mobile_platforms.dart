@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 class SetupMobilePlatforms {
@@ -26,6 +27,24 @@ class SetupMobilePlatforms {
     String androidBuildGradle = '$projectDir/android/app/build.gradle';
     updateBuildGradle(androidBuildGradle);
 
+    // Update config
+    var input = File("$projectDir/TealeafConfig.json").readAsStringSync();
+    Map<String, dynamic> configMap = jsonDecode(input);
+    Map<String, dynamic> tealeafMap = configMap['Tealeaf'];
+    String eocoreVersion = tealeafMap["AndroidEOCoreVersion"];
+    String tealeafVersion = tealeafMap["AndroidTealeafVersion"];
+
+    Map<String, String> properties = {
+      "tealeaf": tealeafVersion,
+      "eocore": eocoreVersion
+    };
+
+    String androidPluginBuildGradle = '$flutterDir/android/build.gradle';
+    updateSDKBuildVersion(androidPluginBuildGradle, properties);
+
+    bool useRelease = tealeafMap["useRelease"];
+    updateUseRelease(androidPluginBuildGradle, useRelease);
+
     // Copy assets from plugin to flutter project
     print("\nCopying iOS assets");
     bool iOsAssetSuccess =
@@ -36,36 +55,6 @@ class SetupMobilePlatforms {
     } else {
       exit(1);
     }
-
-    // Set up iOS
-    // Update Podfile
-    // String iosPodfile = '$projectDir/ios/Podfile';
-    // updatePodfile(iosPodfile);
-
-    // // Update AppDelegate
-    // String iosAppdelegate = '$projectDir/ios/Runner/AppDelegate.swift';
-    // updateAppDelegate(iosAppdelegate);
-
-    // // Update Info.plist
-    // String infoPlist = '$projectDir/ios/Runner/Info.plist';
-    // updateInfoPlist(infoPlist);
-
-    // Delete pubspec.lock
-    // if (File('$projectDir/pubspec.lock').existsSync()) {
-    //   File('$projectDir/pubspec.lock').deleteSync();
-    // }
-
-    // // Update flutter dependencies
-    // Process.runSync('flutter', ['clean'], workingDirectory: projectDir);
-    // Process.runSync('flutter', ['pub', 'get'], workingDirectory: projectDir);
-    // print('');
-
-    // Install pods
-    // bool podSuccess = installPods(projectDir);
-
-    // if (podSuccess) {
-    //   print("\niOS environment installed successfully");
-    // }
 
     if (androidSuccess) {
       print("Android environment installed successfully\n");
@@ -83,41 +72,86 @@ class SetupMobilePlatforms {
     }
   }
 
-  void updateBuildGradle(String androidBuildGradle) {
+  /// MinSDKVersion needs to be >= 21
+  ///
+  void updateBuildGradle(String? androidBuildGradle) {
+    if (androidBuildGradle == null) {
+      print('Error: androidBuildGradle path is null');
+      return;
+    }
+
     String content = File(androidBuildGradle).readAsStringSync();
-    content = content.replaceFirst(RegExp(r'flutter\.minSdkVersion'), '21');
+
+    // Check if minSdkVersion is below 21
+    RegExp minSdkVersionRegex = RegExp(r'flutter\.minSdkVersion\s*=\s*(\d+)');
+    if (minSdkVersionRegex.hasMatch(content)) {
+      int minSdkVersion =
+          int.parse(minSdkVersionRegex.firstMatch(content)!.group(1)!);
+      if (minSdkVersion < 21) {
+        content = content.replaceFirst(
+            minSdkVersionRegex, 'flutter.minSdkVersion = 21');
+      }
+    }
+
     File(androidBuildGradle).writeAsStringSync(content);
   }
 
-  // void updatePodfile(String iosPodfile) {
-  //   String content = File(iosPodfile).readAsStringSync();
-  //   //TODO:
-  //   // content = content.replaceFirst(RegExp(r'# platform :ios, \'11.0\''), 'platform :ios, \'12.0\'');
-  //   File(iosPodfile).writeAsStringSync(content);
-  // }
+  void updateUseRelease(String androidBuildGradle, bool useRelease) {
+    const String mavenUrl =
+        'maven { url "https://s01.oss.sonatype.org/content/repositories/staging" }';
 
-  // void updateAppDelegate(String iosAppdelegate) {
-  //   String content = File(iosAppdelegate).readAsStringSync();
-  //   if (!content.contains('import Tealeaf')) {
-  //     content = content.replaceFirst(
-  //         RegExp(r'import Flutter'), 'import Flutter\nimport Tealeaf');
-  //     content = content.replaceAll(RegExp(r'@UIApplicationMain'), '');
-  //     content +=
-  //         '\n\t\t// Tealeaf code\n\t\tTLFApplicationHelper().enableTealeafFramework()\n\t\t// End Tealeaf code\n';
-  //     //TODO:
-  //     // content = content.replaceFirst(RegExp(r'-> Bool {'), '-> Bool {\n$addTealeafCode');
-  //     File(iosAppdelegate).writeAsStringSync(content);
-  //   }
-  // }
+    RegExp mavenUrlPattern = RegExp(
+        r'\s*maven\s*{\s*url\s*"https://s01\.oss\.sonatype\.org/content/repositories/staging"\s*}\s*');
 
-  // void updateInfoPlist(String infoPlist) {
-  //   String content = File(infoPlist).readAsStringSync();
-  //   if (!content.contains('TealeafApplication')) {
-  //     content = content.replaceFirst(RegExp(r'<dict>'),
-  //         '<dict>\n\t<key>NSPrincipalClass</key>\n\t<string>TealeafApplication</string>');
-  //     File(infoPlist).writeAsStringSync(content);
-  //   }
-  // }
+    // Read the content of the file.
+    String content = File(androidBuildGradle).readAsStringSync();
+
+    // Simplified check for the Maven URL's presence, assuming standard formatting might not exist.
+    bool mavenUrlExists = content.contains(mavenUrl.trim());
+
+    // Find the beginning of the repositories block.
+    String startMarker = 'rootProject.allprojects {\n    repositories {';
+    int startIndex = content.indexOf(startMarker);
+
+    if (useRelease) {
+      // If useRelease is true and the Maven URL exists, remove it.
+      content = content.replaceAll(mavenUrlPattern, '\n');
+    } else {
+      // If useRelease is false and the Maven URL does not exist, add it.
+      if (!mavenUrlExists && startIndex != -1) {
+        // Locate where to insert the Maven URL.
+        int insertIndex =
+            content.indexOf('}', startIndex + startMarker.length) - 1;
+        if (insertIndex != -1) {
+          String beforeInsert = content.substring(0, insertIndex + 1);
+          String afterInsert = content.substring(insertIndex);
+
+          // Inserting the Maven URL with proper indentation.
+          content = "$beforeInsert\n        ${mavenUrl.trim()}\n $afterInsert";
+        }
+      }
+    }
+
+    // Write the modified content back to the file.
+    File(androidBuildGradle).writeAsStringSync(content);
+  }
+
+  /// Which SDK version to be used by plugin
+  ///
+  void updateSDKBuildVersion(
+      String androidBuildGradle, Map<String, String> properties) {
+    String content = File(androidBuildGradle).readAsStringSync();
+
+    properties.forEach((key, value) {
+      String dependencyRegex =
+          "(?<=(api|implementation)\\s+)[\"']io\\.github\\.acoustic-analytics:$key:[\\d.]+[\"']";
+
+      String replacement = "'io.github.acoustic-analytics:$key:$value'";
+      content = content.replaceAll(RegExp(dependencyRegex), replacement);
+    });
+
+    File(androidBuildGradle).writeAsStringSync(content);
+  }
 
   // bool installPods(String projectDir) {
   //   try {
@@ -137,7 +171,7 @@ class SetupMobilePlatforms {
 }
 
 void main(List<String> args) {
-  String currentProjectDir = Directory.current.path;
+  // String currentProjectDir = Directory.current.path;
   // String pluginRoot = getPluginPath(currentProjectDir);
 
   // Get the Flutter project path from the environment variable

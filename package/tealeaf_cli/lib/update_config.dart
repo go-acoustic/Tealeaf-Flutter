@@ -1,47 +1,58 @@
 import 'dart:io';
 import 'package:path/path.dart' as path;
 
-void updateConfig(String projectDir, String key, String value, String type) {
-  // Update Android
-  String androidPath = path.join(
-      projectDir, 'android/app/src/main/assets/TealeafBasicConfig.properties');
-  File(androidPath).writeAsStringSync(File(androidPath)
-      .readAsStringSync()
-      .replaceAll(RegExp('.*$key=.*'), '$key=$value'));
+void updateConfig(String projectDir, String key, dynamic value, String type) {
+  try {
+    // Update Android Configuration
+    String androidPath = path.join(projectDir,
+        'android/app/src/main/assets/TealeafBasicConfig.properties');
+    File androidFile = File(androidPath);
+    if (androidFile.existsSync()) {
+      String androidContent = androidFile.readAsStringSync();
+      RegExp androidRegExp = RegExp('^$key=.*', multiLine: true);
+      String androidReplacement = '$key=$value';
+      if (androidRegExp.hasMatch(androidContent)) {
+        androidContent =
+            androidContent.replaceAll(androidRegExp, androidReplacement);
+      } else {
+        androidContent += '\n$androidReplacement';
+      }
+      androidFile.writeAsStringSync(androidContent);
+    }
 
-  // Update iOS
-  String iosPath = path.join(projectDir,
-      'ios/Pods/TealeafDebug/SDKs/iOS/Debug/TLFResources.bundle/TealeafBasicConfig.plist');
+    // Update iOS Configuration
+    String iosPath = path.join(projectDir,
+        'ios/Pods/TealeafDebug/SDKs/iOS/Debug/TLFResources.bundle/TealeafBasicConfig.plist');
+    File iosFile = File(iosPath);
+    if (iosFile.existsSync()) {
+      List<String> iosLines = iosFile.readAsLinesSync();
+      int keyIndex =
+          iosLines.indexWhere((line) => line.trim() == '<key>$key</key>');
 
-  // Get int for key and value line
-  List<String> iosLines = File(iosPath).readAsLinesSync();
-  int keyLine = iosLines.indexWhere((line) => line.contains('<key>$key</key>'));
-  int valueLine = keyLine + 1;
-  String valueString = iosLines[valueLine];
+      String replacement;
+      if (type == 'String') {
+        replacement = '<string>$value</string>';
+      } else if (type == 'bool') {
+        replacement =
+            '<true/>'; // Assuming value is always true for bool. Handle false case as needed.
+      } else if (type == 'int' || type == 'double') {
+        replacement = '<$type>$value</$type>';
+      } else {
+        throw 'Unsupported type: $type';
+      }
 
-  // Correct valueString for /
-  String correctedString = valueString.replaceAll('/', r'\/');
-
-  // Delete value string
-  String iosContent = File(iosPath).readAsStringSync();
-  File(iosPath).writeAsStringSync(iosContent.replaceAll(correctedString, ''));
-
-  // Update based on type
-  String replacement = "";
-  if (type == 'String') {
-    replacement = '>$key</key>\n\t<string>$value</string>';
-  } else if (type == 'bool') {
-    replacement = '>$key</key>\n\t<$value/>';
-  } else if (type == 'int') {
-    replacement = '>$key</key>\n\t<integer>$value</integer>';
-  } else if (type == 'double') {
-    replacement = '>$key</key>\n\t<real>$value</real>';
+      if (keyIndex != -1) {
+        // Replace the existing value
+        iosLines[keyIndex + 1] = '\t$replacement';
+      } else {
+        // Add new key-value pair
+        iosLines.addAll(['\t<key>$key</key>', '\t$replacement']);
+      }
+      iosFile.writeAsStringSync(iosLines.join('\n'));
+    }
+  } catch (e) {
+    print('Error updating config: $e');
   }
-
-  File(iosPath)
-      .writeAsStringSync(iosContent.replaceAll(RegExp('.$key.*'), replacement));
-
-  sleep(Duration(seconds: 1));
 }
 
 void main(List<String> args) {

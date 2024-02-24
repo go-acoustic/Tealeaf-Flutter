@@ -23,6 +23,11 @@ class Tealeaf {
   bool? disableAutoInstrumentation;
   LayoutConfig? layoutConfig;
 
+  bool? useRelease;
+  String? iOSVersion;
+  String? androidEOCoreVersion;
+  String? androidTealeafVersion;
+
   Tealeaf(
       {this.killSwitchEnabled,
       this.killSwitchUrl,
@@ -44,7 +49,11 @@ class Tealeaf {
       this.setGestureDetector,
       this.logLocationEnabled,
       this.disableAutoInstrumentation,
-      this.layoutConfig});
+      this.layoutConfig,
+      this.useRelease,
+      this.iOSVersion,
+      this.androidEOCoreVersion,
+      this.androidTealeafVersion});
 
   Tealeaf.fromJson(Map<String, dynamic> json) {
     killSwitchEnabled = json['KillSwitchEnabled'];
@@ -67,6 +76,26 @@ class Tealeaf {
     setGestureDetector = json['SetGestureDetector'];
     logLocationEnabled = json['LogLocationEnabled'];
     disableAutoInstrumentation = json['DisableAutoInstrumentation'];
+    // useRelease = json['useRelease'];
+    // iOSVersion = json['iOSVersion'];
+    // androidEOCoreVersion = json['AndroidEOCoreVersion'];
+    // androidTealeafVersion = json['AndroidTealeafVersion'];
+
+    if (json['useRelease'] != null) {
+      useRelease = json['useRelease'];
+    }
+
+    if (json['iOSVersion'] != null) {
+      iOSVersion = json['iOSVersion'];
+    }
+
+    if (json['AndroidEOCoreVersion'] != null) {
+      androidEOCoreVersion = json['AndroidEOCoreVersion'];
+    }
+
+    if (json['AndroidTealeafVersion'] != null) {
+      androidTealeafVersion = json['AndroidTealeafVersion'];
+    }
 
     layoutConfig = json['layoutConfig'] != null
         ? LayoutConfig.fromJson(json['layoutConfig'])
@@ -159,9 +188,22 @@ class Tealeaf {
       data['layoutConfig'] = layoutConfig!.toJson();
     }
 
-    if (layoutConfig != null) {
-      data['layoutConfig'] = layoutConfig!.toJson();
+    if (useRelease != null) {
+      data['useRelease'] = useRelease;
     }
+
+    if (iOSVersion != null) {
+      data['iOSVersion'] = iOSVersion;
+    }
+
+    if (androidEOCoreVersion != null) {
+      data['androidEOCoreVersion'] = androidEOCoreVersion;
+    }
+
+    if (androidTealeafVersion != null) {
+      data['androidTealeafVersion'] = androidTealeafVersion;
+    }
+
     return data;
   }
 }

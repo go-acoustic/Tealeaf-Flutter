@@ -8,8 +8,8 @@ void main(List<String> arguments) async {
   bool debug = false;
   Settings().setVerbose(enabled: debug);
 
-  String appKey = "";
-  String postmessageURL = "";
+  String? appKey;
+  String? postmessageURL;
 
   if (arguments.length == 2) {
     appKey = arguments[0];
@@ -27,14 +27,14 @@ void main(List<String> arguments) async {
   String pluginRoot = tealeaf_cli.getPluginPath(currentProjectDir);
   stdout.writeln('tealeaf_cli working...');
 
-  // // Setup mobile platforms
-  stdout.writeln('Setup mobile platforms');
-  tealeaf_cli.setupMobilePlatforms(pluginRoot, currentProjectDir);
-
-  // // Setup TealeafConfig.json
+  // Setup TealeafConfig.json
   stdout.writeln('Setup TealeafConfig.json');
   tealeaf_cli.setupJsonConfig(
       pluginRoot, currentProjectDir, appKey, postmessageURL);
+
+  // Setup mobile platforms
+  stdout.writeln('Setup mobile platforms');
+  tealeaf_cli.setupMobilePlatforms(pluginRoot, currentProjectDir);
 
   // Update config
   var input = File("$currentProjectDir/TealeafConfig.json").readAsStringSync();
@@ -43,17 +43,18 @@ void main(List<String> arguments) async {
   stdout.writeln('Updating TealeafLayoutConfig');
   tealeaf_cli.updateTealeafLayoutConfig(basicConfig, currentProjectDir);
 
+  // Update Tealeaf basic config.
   basicConfig.tealeaf!.toJson().forEach((key, value) async {
-    if (key != "layoutConfig") {
-      if (key == "AppKey" && appKey != "") {
-        value = appKey;
-      }
-      if (key == "PostMessageUrl" && postmessageURL != "") {
-        value = postmessageURL;
-      }
+    if (key == "layoutConfig") return;
 
-      tealeaf_cli.updateBasicConfig(pluginRoot, currentProjectDir, key, value);
+    if (key == "AppKey" && appKey != null) {
+      value = appKey;
     }
+    if (key == "PostMessageUrl" && postmessageURL != null) {
+      value = postmessageURL;
+    }
+
+    tealeaf_cli.updateBasicConfig(pluginRoot, currentProjectDir, key, value);
   });
 
   stdout.writeln('tl_flutter_plugin configured');

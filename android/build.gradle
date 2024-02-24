@@ -43,11 +43,13 @@ android {
 }
 
 dependencies {
-//    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
     implementation 'androidx.appcompat:appcompat:1.6.1'
 
-    api "io.github.acoustic-analytics:tealeaf:10.3.359"
-    implementation "io.github.acoustic-analytics:eocore:2.0.343"
-//    api files('libs/tealeafmod.jar')
+    api 'io.github.acoustic-analytics:tealeaf:+'
+    implementation 'io.github.acoustic-analytics:eocore:+'
+
+    // For testing local jars only
+    //    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+    //    api files('libs/tealeafmod.jar')
     // api files('libs/tealeafMod-release.aar')
 }

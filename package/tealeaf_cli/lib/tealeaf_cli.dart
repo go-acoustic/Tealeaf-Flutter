@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert';
-import 'package:dcli/dcli.dart';
 import 'package:tealeaf_cli/setup_mobile_platforms.dart';
 import 'package:yaml/yaml.dart';
 import 'models/basic_config_model.dart';
@@ -16,7 +15,18 @@ String getPluginPath(String currentProjectDir) {
   } else {
     String version = dependencies.replaceAll('^', '');
     String pluginDirName = "$pluginName-$version";
-    return "~/.pub-cache/hosted/pub.dev/$pluginDirName";
+    // return "~/.pub-cache/hosted/pub.dev/$pluginDirName";
+
+    String? pubCacheDir;
+    if (Platform.isWindows) {
+      pubCacheDir = Platform.environment['APPDATA'];
+    } else if (Platform.isMacOS) {
+      pubCacheDir = "${Platform.environment['HOME']}/.pub-cache";
+    } else {
+      throw UnsupportedError('Unsupported platform');
+    }
+
+    return "$pubCacheDir/hosted/pub.dev/$pluginDirName";
   }
 }
 
@@ -25,8 +35,8 @@ setupMobilePlatforms(String pluginRoot, String currentProjectDir) {
   setupMobilePlatforms.run(pluginRoot, currentProjectDir);
 }
 
-void setupJsonConfig(String pluginRoot, String currentProjectDir, String appKey,
-    String postMessageUrl) {
+void setupJsonConfig(String pluginRoot, String currentProjectDir,
+    String? appKey, String? postMessageUrl) {
   var template = "$pluginRoot/automation/TealeafConfig.json";
   var file = "$currentProjectDir/TealeafConfig.json";
   // Ensure the file exists by copying the template first
@@ -42,53 +52,73 @@ void setupJsonConfig(String pluginRoot, String currentProjectDir, String appKey,
 }
 
 void updateTealeafConfig(
-    String filePath, String appKey, String postMessageUrl) {
+    String filePath, String? appKey, String? postMessageUrl) {
   var tealeafConfig = File(filePath);
   var configContent = tealeafConfig.readAsStringSync();
 
-  // Use a more flexible way to replace the values
-  var updatedConfig = configContent
-      .replaceAll(RegExp(r'"AppKey":\s*".*?"'), '"AppKey": "$appKey"')
-      .replaceAll(RegExp(r'"PostMessageUrl":\s*".*?"'),
-          '"PostMessageUrl": "$postMessageUrl"');
+  if (appKey != null && postMessageUrl != null) {
+    // Use a more flexible way to replace the values
+    var updatedConfig = configContent
+        .replaceAll(RegExp(r'"AppKey":\s*".*?"'), '"AppKey": "$appKey"')
+        .replaceAll(RegExp(r'"PostMessageUrl":\s*".*?"'),
+            '"PostMessageUrl": "$postMessageUrl"');
 
-  tealeafConfig.writeAsStringSync(updatedConfig);
+    tealeafConfig.writeAsStringSync(updatedConfig);
+  }
 }
 
 updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
   if (basicConfig.tealeaf?.layoutConfig != null) {
+    bool? useRelease = basicConfig.tealeaf?.useRelease;
+
+    String iosReleasePath =
+        '$currentProjectDir/ios/Pods/TealeafDebug/SDKs/iOS/TLFResources.bundle/TealeafLayoutConfig.json';
+    String iosDebugPath =
+        '$currentProjectDir/ios/Pods/TealeafDebug/SDKs/iOS/Debug/TLFResources.bundle/TealeafLayoutConfig.json';
+
     JsonEncoder encoder = JsonEncoder.withIndent('  ');
     String prettyprint = encoder.convert(basicConfig.tealeaf!.layoutConfig);
 
     try {
       File oldAndroidFile = File(
           '$currentProjectDir/android/app/src/main/assets/TealeafLayoutConfig.json');
-      oldAndroidFile.deleteSync();
+      if (oldAndroidFile.existsSync()) {
+        oldAndroidFile.deleteSync();
+      }
+
+      File('$currentProjectDir/android/app/src/main/assets/TealeafLayoutConfig.json')
+          .create(recursive: true)
+          .then((File file) {
+        file.writeAsString(prettyprint);
+        stdout.writeln('Updating Android TealeafLayoutConfig.json');
+      });
+
+      if (useRelease != null && useRelease) {
+        File oldiOSFile = File(iosReleasePath);
+        if (oldAndroidFile.existsSync()) {
+          oldiOSFile.deleteSync();
+        }
+
+        File(iosReleasePath).create(recursive: true).then((File file) {
+          file.writeAsString(prettyprint);
+          stdout.writeln('Updating iOS TealeafLayoutConfig.json');
+        });
+      } else if (useRelease != null && !useRelease) {
+        File oldiOSFile = File(iosDebugPath);
+        if (oldiOSFile.existsSync()) {
+          oldiOSFile.deleteSync();
+        }
+
+        File(iosDebugPath).create(recursive: true).then((File file) {
+          file.writeAsString(prettyprint);
+          stdout.writeln('Updating iOS TealeafLayoutConfig.json');
+        });
+      } else {
+        stdout.writeln('useRelease property not found');
+      }
     } catch (e) {
       stdout.writeln(e);
     }
-
-    try {
-      File oldiOSFile = File(
-          '$currentProjectDir/ios/Pods/TealeafDebug/SDKs/iOS/Debug/TLFResources.bundle/TealeafLayoutConfig.json');
-      oldiOSFile.deleteSync();
-    } catch (e) {
-      stdout.writeln(e);
-    }
-
-    File('$currentProjectDir/android/app/src/main/assets/TealeafLayoutConfig.json')
-        .create(recursive: true)
-        .then((File file) {
-      file.writeAsString(prettyprint);
-      stdout.writeln('Updating Android TealeafLayoutConfig.json');
-    });
-
-    File('$currentProjectDir/ios/Pods/TealeafDebug/SDKs/iOS/Debug/TLFResources.bundle/TealeafLayoutConfig.json')
-        .create(recursive: true)
-        .then((File file) {
-      file.writeAsString(prettyprint);
-      stdout.writeln('Updating iOS TealeafLayoutConfig.json');
-    });
   } else {
     stdout.writeln("Issue with TealeafConfig.json");
   }
@@ -96,7 +126,20 @@ updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
 
 updateBasicConfig(
     String pluginRoot, String currentProjectDir, String key, dynamic value) {
-  String valueType = value.runtimeType.toString();
+  try {
+    String valueAsString;
 
-  updateConfig(currentProjectDir, key, value, valueType);
+    if (value is bool) {
+      // Explicitly handle boolean values to convert them to String
+      valueAsString = value ? 'true' : 'false';
+    } else {
+      // For other types, use toString() to convert them to a String
+      valueAsString = value.toString();
+    }
+
+    String valueType = value.runtimeType.toString();
+    updateConfig(currentProjectDir, key, valueAsString, valueType);
+  } catch (e) {
+    stdout.writeln(e);
+  }
 }

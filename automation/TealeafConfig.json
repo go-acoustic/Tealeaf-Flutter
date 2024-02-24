@@ -1,12 +1,12 @@
 {
     "Tealeaf": {
-        "AppKey": "<AppKey>",
-        "PostMessageUrl": "<PostMessageUrl>",
-        "KillSwitchUrl": "<KillSwitchUrl>",
-        "useRelease":"<false/true>",
-        "iOSVersion":"<>",
-        "AndroidEOCoreVersion": "<>",
-        "AndroidTealeafVersion": "<>",
+        "AppKey": "fa47722a7fef4bcd8677fd8d6d113a0d",
+        "PostMessageUrl": "https://lib-us-2.brilliantcollector.com/collector/collectorPost",
+        "KillSwitchUrl": "https://lib-us-2.brilliantcollector.com/collector/switch/fa47722a7fef4bcd8677fd8d6d113a0d",
+        "useRelease": false,
+        "iOSVersion":"10.6.279",
+        "AndroidEOCoreVersion": "2.0.343",
+        "AndroidTealeafVersion": "10.3.359",
         "layoutConfig": {
         "AutoLayout": {
           "GlobalScreenSettings": {

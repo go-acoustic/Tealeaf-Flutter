@@ -11,10 +11,12 @@ String getPluginPath(String currentProjectDir) {
   final pubspecLoader = loadYaml(pubFile) as YamlMap;
   final dependencies = pubspecLoader['dependencies'][pluginName];
   if (dependencies is YamlMap) {
+    stdout.writeln('Plugin is from local path: ${dependencies['path']}');
     return dependencies['path'];
   } else {
     String version = dependencies.replaceAll('^', '');
     String pluginDirName = "$pluginName-$version";
+    stdout.writeln('Plugin from pub dev path: $pluginDirName');
     // return "~/.pub-cache/hosted/pub.dev/$pluginDirName";
 
     String? pubCacheDir;
@@ -47,8 +49,7 @@ void setupJsonConfig(String pluginRoot, String currentProjectDir,
 
   // Now update the TealeafConfig.json file with AppKey and PostMessageUrl
   updateTealeafConfig(file, appKey, postMessageUrl);
-  stdout.writeln(
-      'TealeafConfig updated with your project settings. You are ready to go!');
+  stdout.writeln('TealeafConfig updated with your project settings.');
 }
 
 void updateTealeafConfig(
@@ -90,7 +91,7 @@ updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
           .create(recursive: true)
           .then((File file) {
         file.writeAsString(prettyprint);
-        stdout.writeln('Updating Android TealeafLayoutConfig.json');
+        stdout.writeln('Updated Android TealeafLayoutConfig.json');
       });
 
       if (useRelease != null && useRelease) {
@@ -101,7 +102,7 @@ updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
 
         File(iosReleasePath).create(recursive: true).then((File file) {
           file.writeAsString(prettyprint);
-          stdout.writeln('Updating iOS TealeafLayoutConfig.json');
+          stdout.writeln('Updated iOS TealeafLayoutConfig.json');
         });
       } else if (useRelease != null && !useRelease) {
         File oldiOSFile = File(iosDebugPath);
@@ -111,7 +112,7 @@ updateTealeafLayoutConfig(BasicConfig basicConfig, String currentProjectDir) {
 
         File(iosDebugPath).create(recursive: true).then((File file) {
           file.writeAsString(prettyprint);
-          stdout.writeln('Updating iOS TealeafLayoutConfig.json');
+          stdout.writeln('Updated iOS TealeafLayoutConfig.json');
         });
       } else {
         stdout.writeln('useRelease property not found');

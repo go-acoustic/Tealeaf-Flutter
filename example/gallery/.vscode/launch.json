@@ -10,7 +10,7 @@
             "type": "dart",
             "program": "lib/main.dart",
             "flutterMode": "debug",
-            "preLaunchTask": "Run ../../../package/tealeaf_cli/bin/tealeaf_cli.dart"
+            "preLaunchTask": "Run Tealeaf CLI"
         },
         {
             "name": "gallery (profile mode)",

@@ -7,6 +7,7 @@ import 'package:dcli/dcli.dart';
 void main(List<String> arguments) async {
   bool debug = false;
   Settings().setVerbose(enabled: debug);
+  stdout.writeln('tealeaf_cli working...');
 
   String? appKey;
   String? postmessageURL;
@@ -15,8 +16,7 @@ void main(List<String> arguments) async {
     appKey = arguments[0];
     postmessageURL = arguments[1];
 
-    print(appKey);
-    print(postmessageURL);
+    stdout.writeln('Arguments passed in: $appKey, $postmessageURL \n');
   }
 
   // For test only
@@ -25,7 +25,8 @@ void main(List<String> arguments) async {
 
   String currentProjectDir = Directory.current.path;
   String pluginRoot = tealeaf_cli.getPluginPath(currentProjectDir);
-  stdout.writeln('tealeaf_cli working...');
+  stdout.writeln('currentProjectDir:  $currentProjectDir');
+  stdout.writeln('pluginRoot:  $pluginRoot \n');
 
   // Setup TealeafConfig.json
   stdout.writeln('Setup TealeafConfig.json');
@@ -58,4 +59,9 @@ void main(List<String> arguments) async {
   });
 
   stdout.writeln('tl_flutter_plugin configured');
+
+  // Then, clean and rebuild the Flutter app:
+  Process.runSync('flutter', ['clean'], runInShell: true);
+  Process.runSync('flutter', ['pub', 'get'], runInShell: true);
+  stdout.writeln('tl_flutter_plugin clean and pub get for the Flutter app. \n');
 }

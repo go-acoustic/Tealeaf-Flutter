@@ -6,7 +6,7 @@ class SetupMobilePlatforms {
     // Check if android and ios directories exist
     if (!Directory('$projectDir/android').existsSync() ||
         !Directory('$projectDir/ios').existsSync()) {
-      print(
+      stdout.writeln(
           "Error with Flutter project's root directory. Please confirm the directory contains an android and ios directory.");
       exit(1);
     }
@@ -18,7 +18,7 @@ class SetupMobilePlatforms {
         '$projectDir/android/app/src/main/assets/');
 
     if (androidSuccess) {
-      print("Complete Copying Android assets\n");
+      stdout.writeln("Complete Copying Android assets\n");
     } else {
       exit(1);
     }
@@ -45,19 +45,8 @@ class SetupMobilePlatforms {
     bool useRelease = tealeafMap["useRelease"];
     updateUseRelease(androidPluginBuildGradle, useRelease);
 
-    // Copy assets from plugin to flutter project
-    print("\nCopying iOS assets");
-    bool iOsAssetSuccess =
-        copyAssets('$flutterDir/automation/ios/', '$projectDir/ios/Runner/');
-
-    if (iOsAssetSuccess) {
-      print("Complete Copying iOS assets\n");
-    } else {
-      exit(1);
-    }
-
-    if (androidSuccess) {
-      print("Android environment installed successfully\n");
+    if (!androidSuccess) {
+      stdout.writeln("Android environment problem copy assets. \n");
     }
   }
 
@@ -67,7 +56,7 @@ class SetupMobilePlatforms {
       Process.runSync('cp', ['-r', sourceDir, destinationDir]);
       return true;
     } catch (e) {
-      print('Failed to copy assets: $e');
+      stdout.writeln('Failed to copy assets: $e');
       return false;
     }
   }
@@ -76,7 +65,7 @@ class SetupMobilePlatforms {
   ///
   void updateBuildGradle(String? androidBuildGradle) {
     if (androidBuildGradle == null) {
-      print('Error: androidBuildGradle path is null');
+      stdout.writeln('Error: androidBuildGradle path is null');
       return;
     }
 
@@ -143,8 +132,10 @@ class SetupMobilePlatforms {
     String content = File(androidBuildGradle).readAsStringSync();
 
     properties.forEach((key, value) {
+      // String dependencyRegex =
+      //     "(?<=(api|implementation)\\s+)[\"']io\\.github\\.acoustic-analytics:$key:[\\d.]+[\"']";
       String dependencyRegex =
-          "(?<=(api|implementation)\\s+)[\"']io\\.github\\.acoustic-analytics:$key:[\\d.]+[\"']";
+          "(?<=(api|implementation)\\s+)[\"']io\\.github\\.acoustic-analytics:$key:.*[\"']";
 
       String replacement = "'io.github.acoustic-analytics:$key:$value'";
       content = content.replaceAll(RegExp(dependencyRegex), replacement);

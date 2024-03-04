@@ -48,6 +48,7 @@ import com.tl.uic.model.Style;
 import com.tl.uic.model.Touch;
 import com.tl.uic.model.TouchPosition;
 import com.tl.uic.model.kotlin.Accessibility;
+import com.tl.uic.model.kotlin.TLFPerformanceNavigationType;
 import com.tl.uic.util.EnhancedImageUtil;
 import com.tl.uic.util.LayoutUtil;
 import com.tl.uic.util.ValueUtil;
@@ -964,6 +965,13 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                     tlFocusChangeMessage(args);
                     result.success(null);
                     break;
+                case "logperformanceevent":
+                    if (args == null) {
+                        result.error(NO_ARGS, "log performance event requires arguments list", getStackTraceAsString());
+                        return;
+                    }
+                    result.success(tlLogPerformanceMessage(args));
+                    break;
                 default:
                     result.notImplemented();
                     break;
@@ -976,6 +984,43 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
             result.error(INVOKE_EXCEPTION + request, t.getMessage(), stackTraceString);
         }
+    }
+
+    private boolean tlLogPerformanceMessage(Object args) {
+        LOGGER.log(Level.INFO, "Tealeaf log performance message");
+        
+        final int logLevel = EOMonitoringLevel.kEOMonitoringLevelInfo.getValue();
+        TLFPerformanceNavigationType navigationType;
+        final int naviagtionInt = Integer.parseInt(checkForParameter(args, "navigationType"));
+        switch (naviagtionInt) {
+            case 0:
+                navigationType = TLFPerformanceNavigationType.NAVIGATE;
+                break;
+            case 1:
+                navigationType = TLFPerformanceNavigationType.RELOAD;
+                break;
+            case 2:
+                navigationType = TLFPerformanceNavigationType.BACK_FORWARD;
+                break;
+            case 255:
+                navigationType = TLFPerformanceNavigationType.RESERVED;
+                break;
+            default:
+                navigationType = TLFPerformanceNavigationType.NAVIGATE;
+                break;
+        }
+        final long redirectCount = Long.parseLong(checkForParameter(args, "redirectCount"));
+        final long navigationStart = Long.parseLong(checkForParameter(args, "navigationStart"));
+        final long unloadEventStart = Long.parseLong(checkForParameter(args, "unloadEventStart"));
+        final long unloadEventEnd = Long.parseLong(checkForParameter(args, "unloadEventEnd"));
+        final long redirectStart = Long.parseLong(checkForParameter(args, "redirectStart"));
+        final long redirectEnd = Long.parseLong(checkForParameter(args, "redirectEnd"));
+        final long loadEventStart = Long.parseLong(checkForParameter(args, "loadEventStart"));
+        final long loadEventEnd = Long.parseLong(checkForParameter(args, "loadEventEnd"));
+
+        return Tealeaf.logPerformanceEvent(logLevel, navigationType, redirectCount,
+                navigationStart, unloadEventStart, unloadEventEnd, redirectStart, redirectEnd,
+                loadEventStart, loadEventEnd);
     }
 
     void tlConnectionMessage(Object args) throws Exception {

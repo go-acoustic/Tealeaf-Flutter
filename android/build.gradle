@@ -22,7 +22,6 @@ rootProject.allprojects {
         // Tealeaf staging repo
         // maven { url "https://s01.oss.sonatype.org/content/groups/staging" }
         maven { url "https://s01.oss.sonatype.org/content/repositories/staging" }
-
     }
 }
 

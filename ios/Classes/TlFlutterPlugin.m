@@ -694,7 +694,7 @@
     }
 }
 
-- (void) tlLogMessage: (NSDictionary *) message addType: (NSNumber *) tlType {
+- (BOOL) tlLogMessage: (NSDictionary *) message addType: (NSNumber *) tlType {
     [self getScreenViewOffset];
     NSMutableDictionary *baseMessage = [@{@"fromWeb": @(_fromWeb), @"offset": @47, @"screenviewOffset": @(_screenOffset), @"type": @0} mutableCopy];
     
@@ -705,7 +705,7 @@
     
     NSLog(@"Logging Messsage: %@", logMessageString);
     
-    [[TLFCustomEvent sharedInstance] logJSONMessagePayloadStr:logMessageString];
+    return [[TLFCustomEvent sharedInstance] logJSONMessagePayloadStr:logMessageString];
 }
 
 - (void) tlScreenview: (NSDictionary *) args {
@@ -953,6 +953,53 @@ NSString *processString(NSString *inputString) {
     }
 }
 
+- (BOOL) logPerformanceEvent: (NSDictionary *) args {
+    NSString *type = @"NAVIGATE";
+    long redirectCount = [self checkParameterStringAsInteger:args withKey:@"redirectCount"];
+    long navigationStart = [self checkParameterStringAsInteger:args withKey:@"navigationStart"];
+    long unloadEventStart = [self checkParameterStringAsInteger:args withKey:@"unloadEventStart"];
+    long unloadEventEnd = [self checkParameterStringAsInteger:args withKey:@"unloadEventEnd"];
+    long redirectStart = [self checkParameterStringAsInteger:args withKey:@"redirectStart"];
+    long redirectEnd = [self checkParameterStringAsInteger:args withKey:@"redirectEnd"];
+    long loadEventStart = [self checkParameterStringAsInteger:args withKey:@"loadEventStart"];
+    long loadEventEnd = [self checkParameterStringAsInteger:args withKey:@"loadEventEnd"];
+    
+
+    NSDictionary *performanceMessage = @{
+        @"performance": @{
+            @"navigation": @{
+                @"type":          type,
+                @"redirectCount": @(redirectCount),
+            },
+            @"timing": @{
+                @"navigationStart":             @(navigationStart),
+                @"unloadEventStart":            @(unloadEventStart),
+                @"unloadEventEnd":              @(unloadEventEnd),
+                @"redirectStart":               @(redirectStart),
+                @"redirectEnd":                 @(redirectEnd),
+                @"loadEventStart":              @(loadEventStart),
+                @"loadEventEnd":                @(loadEventEnd),
+                @"fetchStart":                  @(-1),
+                @"domainLookupStart":           @(-1),
+                @"domainLookupEnd":             @(-1),
+                @"connectStart":                @(-1),
+                @"connectEnd":                  @(-1),
+                @"secureConnectionStart":       @(-1),
+                @"requestStart":                @(-1),
+                @"responseStart":               @(-1),
+                @"responseEnd":                 @(-1),
+                @"domLoading":                  @(-1),
+                @"domInteractive":              @(-1),
+                @"domContentLoadedEventStart":  @(-1),
+                @"domContentLoadedEventEnd":    @(-1),
+                @"domComplete":                 @(-1),
+            },
+        },
+    };
+
+    return [self tlLogMessage:performanceMessage addType: @7];
+}
+
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
     @try {
         if ([@"getPlatformVersion" caseInsensitiveCompare:call.method] == NSOrderedSame) {
@@ -1016,6 +1063,9 @@ NSString *processString(NSString *inputString) {
         else if ([@"focuschanged" caseInsensitiveCompare:call.method] == NSOrderedSame) {
             [self tlFocusChanged:call.arguments];
             result(nil);
+        }
+        else if ([@"logPerformanceEvent" caseInsensitiveCompare:call.method] == NSOrderedSame) {
+            result(@([self logPerformanceEvent:call.arguments]));
         }
         else {
             result(FlutterMethodNotImplemented);

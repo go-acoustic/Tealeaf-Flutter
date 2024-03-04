@@ -24,7 +24,6 @@ class Tealeaf extends StatelessWidget {
 
   static bool isSwiping = false;
 
-
   // Create an instance of LoggingNavigatorObserver
   static final LoggingNavigatorObserver loggingNavigatorObserver =
       LoggingNavigatorObserver();
@@ -119,7 +118,8 @@ class Tealeaf extends StatelessWidget {
             TealeafHelper.pointerEventHelper("DOWN", details);
           },
           onPointerMove: (details) {
-            tlLogger.v("Gesture move, swipe event checkForScroll() will fire..");
+            tlLogger
+                .v("Gesture move, swipe event checkForScroll() will fire..");
             Tealeaf.isSwiping = true;
             TealeafHelper.pointerEventHelper("MOVE", details);
           },
@@ -206,13 +206,9 @@ class LoggingNavigatorObserver extends NavigatorObserver {
       tlLogger
           .v('PluginTealeaf.logScreenLayout - Pushed ${route.settings.name}');
 
-      PluginTealeaf.tlApplicationCustomEvent(
-        eventName: 'Performance Metric',
-        customData: {
-          'Navigation': route.settings.name.toString(),
-          'Load Time': duration.toString(),
-        },
-        logLevel: 1,
+      PluginTealeaf.logPerformanceEvent(
+        loadEventStart: 0,
+        loadEventEnd: duration,
       );
     });
   }
@@ -664,7 +660,6 @@ class PluginTealeaf {
     }
   }
 
-
   ///
   /// For Application level handled exception
   ///
@@ -891,6 +886,68 @@ class PluginTealeaf {
           msg: 'Unable to process focus change message!');
     }
   }
+
+  ///
+  /// Logs performance event with params:
+  ///
+  /// [navigationType]   the navigation type, Default NAVIGATE = 0, RELOAD = 1, BACK_FORWARD = 2, RESERVED = 255
+  /// [redirectCount]    the redirect count, Default 0
+  /// [navigationStart]  the navigation start time - Default 0
+  /// [unloadEventStart] the unload event start time - Default 0, onDestroy
+  /// [unloadEventEnd]   the unload event end time - Time ending from unloadStart
+  /// [redirectStart]    the redirect start time - Default 0
+  /// [redirectEnd]      the redirect end time - Time ending from redirectStart
+  /// [loadEventStart]   the load event start time - Default 0, onCreate
+  /// [loadEventEnd]     the load event end time - End time of loading page, onResume
+  ///
+  /// Returns true if log performance event succeed, false otherwise
+  ///
+  static Future<bool> logPerformanceEvent(
+      {final int navigationType = 0,
+      final int redirectCount = 0,
+      final int navigationStart = 0,
+      final int unloadEventStart = 0,
+      final int unloadEventEnd = 0,
+      final int redirectStart = 0,
+      final int redirectEnd = 0,
+      final int loadEventStart = 0,
+      final int loadEventEnd = 0}) async {
+    try {
+      if (navigationType < 0)
+        throw ArgumentError("navigationType must be positive");
+      if (redirectCount < 0)
+        throw ArgumentError("redirectCount must be positive");
+      if (navigationStart < 0)
+        throw ArgumentError("navigationStart must be positive");
+      if (unloadEventStart < 0)
+        throw ArgumentError("navigationType must be positive");
+      if (unloadEventEnd < 0)
+        throw ArgumentError("unloadEventStart must be positive");
+      if (redirectStart < 0)
+        throw ArgumentError("redirectStart must be positive");
+      if (redirectEnd < 0) throw ArgumentError("redirectEnd must be positive");
+      if (loadEventStart < 0)
+        throw ArgumentError("loadEventStart must be positive");
+      if (loadEventEnd < 0)
+        throw ArgumentError("loadEventEnd must be positive");
+
+      return await _channel.invokeMethod('logPerformanceEvent',
+          <dynamic, dynamic>{
+            'navigationType': navigationType.toString(),
+            'redirectCount': redirectCount.toString(),
+            'navigationStart': navigationStart.toString(),
+            'unloadEventStart': unloadEventStart.toString(),
+            'unloadEventEnd': unloadEventEnd.toString(),
+            'redirectStart': redirectStart.toString(),
+            'redirectEnd': redirectEnd.toString(),
+            'loadEventStart': loadEventStart.toString(),
+            'loadEventEnd': loadEventEnd.toString()
+          });
+    } on PlatformException catch (pe) {
+      throw TealeafException(
+          pe, msg: 'Unable to process log performance event message!');
+    }
+  }
 }
 
 ///
@@ -926,13 +983,9 @@ class PerformanceObserver extends WidgetsBindingObserver {
       final endTime = DateTime.now().millisecondsSinceEpoch;
       final int duration = endTime - startTime;
 
-      PluginTealeaf.tlApplicationCustomEvent(
-        eventName: 'Performance Metric',
-        customData: {
-          'AppLifecycleState': state.toString(),
-          'Load Time': duration.toString(),
-        },
-        logLevel: 1,
+      PluginTealeaf.logPerformanceEvent(
+        loadEventStart: 0,
+        loadEventEnd: duration,
       );
 
       tlLogger.v('_PerformanceObserver($state): $duration');

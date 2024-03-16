@@ -46,12 +46,12 @@ dependencies:
     #   tl_flutter_plugin: ^x.y.z
     # or
     #   tl_flutter_plugin:
-    #     git: https://github.com/acoustic-analytics/acoustic_tealeaf.git
+    #     git: https://github.com/go-acoustic/acoustic_tealeaf.git
     # See https://dart.dev/tools/pub/dependencies#version-constraints
     # The example app is bundled with the plugin so we use a path dependency on
     # the parent directory to specify the current plugin's version. Applications
     # should use either the pub.dev repo or the Acoustic GitHub repo as shown above.
-    # git: https://github.com/acoustic-analytics/acoustic_tealeaf.git
+    # git: https://github.com/go-acoustic/acoustic_tealeaf.git
     path: ../../
 
 dev_dependencies:

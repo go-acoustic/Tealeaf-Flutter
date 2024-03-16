@@ -13,6 +13,11 @@ String getPluginPath(String currentProjectDir) {
   if (dependencies is YamlMap) {
     stdout.writeln('Plugin is from local path: ${dependencies['path']}');
     return dependencies['path'];
+  }
+  if (dependencies == null || dependencies.isEmpty) {
+    stdout.writeln(
+        'Plugin must be installed with "flutter pub add tl_flutter_plugin"');
+    throw FormatException('Invalid pubspec.yaml dependencies');
   } else {
     String version = dependencies.replaceAll('^', '');
     String pluginDirName = "$pluginName-$version";

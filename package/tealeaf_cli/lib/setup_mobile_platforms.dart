@@ -133,11 +133,11 @@ class SetupMobilePlatforms {
 
     properties.forEach((key, value) {
       // String dependencyRegex =
-      //     "(?<=(api|implementation)\\s+)[\"']io\\.github\\.acoustic-analytics:$key:[\\d.]+[\"']";
+      //     "(?<=(api|implementation)\\s+)[\"']io\\.github\\.go-acoustic:$key:[\\d.]+[\"']";
       String dependencyRegex =
-          "(?<=(api|implementation)\\s+)[\"']io\\.github\\.acoustic-analytics:$key:.*[\"']";
+          "(?<=(api|implementation)\\s+)[\"']io\\.github\\.go-acoustic:$key:.*[\"']";
 
-      String replacement = "'io.github.acoustic-analytics:$key:$value'";
+      String replacement = "'io.github.go-acoustic:$key:$value'";
       content = content.replaceAll(RegExp(dependencyRegex), replacement);
     });
 

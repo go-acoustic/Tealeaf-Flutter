@@ -114,7 +114,7 @@ PODS:
     - TealeafDebug/Core (= 10.6.279)
   - TealeafDebug/Core (10.6.279):
     - EOCoreDebug
-  - tl_flutter_plugin (2.0.22-beta):
+  - tl_flutter_plugin (2.0.23-beta):
     - Flutter
     - TealeafDebug (= 10.6.279)
   - url_launcher_ios (0.0.1):
@@ -206,7 +206,7 @@ SPEC CHECKSUMS:
   PromisesSwift: 9d77319bbe72ebf6d872900551f7eeba9bce2851
   shared_preferences_foundation: 5b919d13b803cadd15ed2dc053125c68730e5126
   TealeafDebug: fecfe227da2b502fa9406c5d5888259c8ad480de
-  tl_flutter_plugin: a57c61627e560e22db9c5f0b9de76a1a1b1ecf88
+  tl_flutter_plugin: 59cb02bfaf9b47a9f8f806c16cdbf3ed6dcb4c99
   url_launcher_ios: 08a3dfac5fb39e8759aeb0abbd5d9480f30fc8b4
 
 PODFILE CHECKSUM: d5a5ee940723cc0d96df87cb58b9fe5dcb752055

@@ -1,0 +1,8 @@
+{
+  "title": [
+    {
+      "pattern": "^([A-Z0-9_.-]{2,10}-\\d+[\\s:,].*)",
+      "message": "Your title needs to begin with a Jira number and short description of the changes"
+    }
+  ]
+}

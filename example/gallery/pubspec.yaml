@@ -39,7 +39,7 @@ dependencies:
   url_launcher: ^6.1.2
   vector_math: ^2.1.2
 
-  tl_flutter_plugin: #^1.1.1
+  tl_flutter_plugin: '2.0.24-beta'
 
     # tl_flutter_plugin:
     # When depending on this package from an independent app use something like:
@@ -52,7 +52,7 @@ dependencies:
     # the parent directory to specify the current plugin's version. Applications
     # should use either the pub.dev repo or the Acoustic GitHub repo as shown above.
     # git: https://github.com/go-acoustic/acoustic_tealeaf.git
-    path: ../../
+    # path: ../../
 
 dev_dependencies:
   integration_test:

@@ -1,3 +1,43 @@
+## 2.0.25-beta
+Beta Tealeaf-Flutter Change Notes: 
+Bug Fixes
+
+- Minor changes.
+
+Improvements
+
+- In maven central, libraries moved from namespace acoustic-analytics to go-acoustic.
+- Support Gesture Auto instrumentation.
+- Support Flutter Gesture meta data capture.
+- Support Mask by Accesibility.
+
+Our environment for this release:
+
+- Visual Studio Code Version: 1.80.0 (Universal)
+- Xcode 14.2
+- MacOS 13.2
+- iOS 12.x to 15.x
+- Supported architectures:
+	- simulator
+		- arm64
+		- x86_64
+	- device
+		- arm64
+-Android 21-34
+
+List of items are in the roadmap but not supported yet
+
+- Masking
+- Input Text Value Change
+- Accessibility object
+- Network Connection logging
+- Scripts to automate instrumentation setup
+- App performance metrics
+
+Known Issues
+
+- Only Android & IOS platforms are supported.
+- When Navigation route isn't set, replay shows null screenview.
 ## 2.0.24-beta
 Beta Tealeaf-Flutter Change Notes: 
 Bug Fixes

@@ -913,23 +913,31 @@ class PluginTealeaf {
       final int loadEventStart = 0,
       final int loadEventEnd = 0}) async {
     try {
-      if (navigationType < 0)
+      if (navigationType < 0) {
         throw ArgumentError("navigationType must be positive");
-      if (redirectCount < 0)
+      }
+      if (redirectCount < 0) {
         throw ArgumentError("redirectCount must be positive");
-      if (navigationStart < 0)
+      }
+      if (navigationStart < 0) {
         throw ArgumentError("navigationStart must be positive");
-      if (unloadEventStart < 0)
+      }
+      if (unloadEventStart < 0) {
         throw ArgumentError("navigationType must be positive");
-      if (unloadEventEnd < 0)
+      }
+      if (unloadEventEnd < 0) {
         throw ArgumentError("unloadEventStart must be positive");
-      if (redirectStart < 0)
+      }
+      if (redirectStart < 0) {
         throw ArgumentError("redirectStart must be positive");
+      }
       if (redirectEnd < 0) throw ArgumentError("redirectEnd must be positive");
-      if (loadEventStart < 0)
+      if (loadEventStart < 0) {
         throw ArgumentError("loadEventStart must be positive");
-      if (loadEventEnd < 0)
+      }
+      if (loadEventEnd < 0) {
         throw ArgumentError("loadEventEnd must be positive");
+      }
 
       return await _channel.invokeMethod('logPerformanceEvent',
           <dynamic, dynamic>{
@@ -1008,20 +1016,5 @@ class PerformanceObserver extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _performanceCustomEvent(state);
-  }
-}
-
-class SemanticsFinder extends WidgetsBindingObserver {
-  List<SemanticsNode> semanticsNodes = [];
-
-  @override
-  void didChangeAccessibilityFeatures() {
-    var tree = RendererBinding
-        .instance.pipelineOwner.semanticsOwner?.rootSemanticsNode;
-
-    tree?.visitChildren((SemanticsNode node) {
-      semanticsNodes.add(node);
-      return true;
-    });
   }
 }

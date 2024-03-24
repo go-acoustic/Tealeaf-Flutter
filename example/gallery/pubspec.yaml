@@ -28,7 +28,7 @@ dependencies:
   # An exact version pin will be provided by the Flutter SDK
   intl: any
   meta: ^1.7.0
-  package_info_plus: ^5.0.1
+  package_info_plus: ^4.2.0
   path_provider: ^2.0.11
   provider: ^6.0.2
   rally_assets: ^3.0.1
@@ -39,7 +39,7 @@ dependencies:
   url_launcher: ^6.1.2
   vector_math: ^2.1.2
 
-  tl_flutter_plugin: '2.0.24-beta'
+  tl_flutter_plugin: #'2.0.25-beta'
 
     # tl_flutter_plugin:
     # When depending on this package from an independent app use something like:
@@ -52,7 +52,7 @@ dependencies:
     # the parent directory to specify the current plugin's version. Applications
     # should use either the pub.dev repo or the Acoustic GitHub repo as shown above.
     # git: https://github.com/go-acoustic/acoustic_tealeaf.git
-    # path: ../../
+    path: ../../
 
 dev_dependencies:
   integration_test:

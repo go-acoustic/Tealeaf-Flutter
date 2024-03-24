@@ -60,28 +60,9 @@ class SetupMobilePlatforms {
       return false;
     }
   }
-
-  /// MinSDKVersion needs to be >= 21
-  ///
-  void updateBuildGradle(String? androidBuildGradle) {
-    if (androidBuildGradle == null) {
-      stdout.writeln('Error: androidBuildGradle path is null');
-      return;
-    }
-
+  void updateBuildGradle(String androidBuildGradle) {
     String content = File(androidBuildGradle).readAsStringSync();
-
-    // Check if minSdkVersion is below 21
-    RegExp minSdkVersionRegex = RegExp(r'flutter\.minSdkVersion\s*=\s*(\d+)');
-    if (minSdkVersionRegex.hasMatch(content)) {
-      int minSdkVersion =
-          int.parse(minSdkVersionRegex.firstMatch(content)!.group(1)!);
-      if (minSdkVersion < 21) {
-        content = content.replaceFirst(
-            minSdkVersionRegex, 'flutter.minSdkVersion = 21');
-      }
-    }
-
+    content = content.replaceFirst(RegExp(r'flutter\.minSdkVersion'), '21');
     File(androidBuildGradle).writeAsStringSync(content);
   }
 

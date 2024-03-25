@@ -4,7 +4,7 @@
         "PostMessageUrl": "https://lib-us-2.brilliantcollector.com/collector/collectorPost",
         "KillSwitchUrl": "https://lib-us-2.brilliantcollector.com/collector/switch/fa47722a7fef4bcd8677fd8d6d113a0d",
         "useRelease": false,
-        "iOSVersion": "+",
+        "iOSVersion": "10.6.278",
         "AndroidEOCoreVersion": "+",
         "AndroidTealeafVersion": "+",
         "layoutConfig": {

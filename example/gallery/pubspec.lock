@@ -791,7 +791,7 @@ packages:
       path: "../.."
       relative: true
     source: path
-    version: "2.3.37-beta"
+    version: "2.3.38-beta"
   transparent_image:
     dependency: "direct main"
     description:

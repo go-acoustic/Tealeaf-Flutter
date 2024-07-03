@@ -53,10 +53,7 @@ void main() {
       await tester.restartAndRestore();
       await tester.pump(const Duration(seconds: 1));
       expect(find.byKey(const ValueKey('app-bar@material')), findsOneWidget);
-    },
-    variant: const TargetPlatformVariant(
-      <TargetPlatform>{TargetPlatform.android},
-    ),
+    }
   );
 
   testWidgets(
@@ -95,10 +92,7 @@ void main() {
       await tester.restartAndRestore();
       await tester.pump(const Duration(seconds: 1));
       expect(find.text(bannerDescriptionText), findsOneWidget);
-    },
-    variant: const TargetPlatformVariant(
-      <TargetPlatform>{TargetPlatform.android},
-    ),
+    }
   );
 
   testWidgets(
@@ -179,9 +173,6 @@ void main() {
       // Should be on the starred email page instead of any other.
       expect(find.text('Free money'), findsOneWidget);
     },
-    variant: const TargetPlatformVariant(
-      <TargetPlatform>{TargetPlatform.android},
-    ),
     skip: true,
     // TODO(x): State restoration test is failing at Inbox tap is failing, but works in App, https://github.com/flutter/gallery/issues/570.
   );

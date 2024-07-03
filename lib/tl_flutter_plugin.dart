@@ -83,14 +83,14 @@ class Tealeaf extends StatelessWidget {
         return false;
       },
       child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+        behavior: HitTestBehavior.translucent,
         child: Listener(
           onPointerUp: (details) {
             TealeafHelper.pointerEventHelper("UP", details);
 
             tlLogger.v("Is swiping? ${getIsSwiping()}");
 
-            if (!getIsSwiping()) {
+            // if (!getIsSwiping()) {
               // Handle onPointerUp event here
               // Start time as reference when there's navigation change
               Tealeaf.startTime = DateTime.now().millisecondsSinceEpoch;
@@ -112,7 +112,7 @@ class Tealeaf extends StatelessWidget {
               });
 
               Tealeaf.isSwiping = false;
-            }
+            // }
           },
           onPointerDown: (details) {
             TealeafHelper.pointerEventHelper("DOWN", details);
@@ -462,11 +462,6 @@ Future<List<Map<String, dynamic>>> parseWidgetTree(Element element) async {
 
     /// Starting to parse tree
     traverse(element, 0);
-
-    // Encode the JSON object
-    String jsonString = jsonEncode(widgetTree);
-
-    PluginTealeaf.tlApplicationCustomEvent(eventName: jsonString);
   } catch (error) {
     // Handle errors using try-catch block
     tlLogger.v('Error caught in try-catch: $error');
@@ -1018,3 +1013,4 @@ class PerformanceObserver extends WidgetsBindingObserver {
     _performanceCustomEvent(state);
   }
 }
+

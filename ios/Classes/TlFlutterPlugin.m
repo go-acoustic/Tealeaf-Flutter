@@ -4,6 +4,25 @@
 
 #import <EOCore/EOApplicationHelper.h>
 
+
+@interface Position : NSObject
+
+@property (nonatomic, assign) CGRect rect;
+@property (nonatomic, assign) int x;
+@property (nonatomic, assign) int y;
+@property (nonatomic, assign) int width;
+@property (nonatomic, assign) int height;
+@property (nonatomic, copy) NSString *label;
+
+@end
+
+@implementation Position
+
+// You can implement custom initializers or other methods here if needed
+
+@end
+
+
 /**
  * TlFlutterPlugin
  *
@@ -55,12 +74,38 @@
     
     [self resetScreenLoadTime];
     
-    // [[TLFApplicationHelper sharedInstance] enableTealeafFramework];
     setenv("EODebug", "1", 1);
     setenv("TLF_DEBUG", "1", 1);
 
     TLFApplicationHelper *tlfApplicationHelperObj = [[TLFApplicationHelper alloc] init];
-        [tlfApplicationHelperObj enableTealeafFramework];
+    
+    // Disable native SDK auto instrumentation to avoid duplicatation and meta data.
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUIButton value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUIDatePicker value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUIPageControl value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUIPickerView value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUIScrollView value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUISegmentedControl value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUISwitch value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemAddGestureRecognizerUITextView value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemDisableAlertAutoCapture value:@"true" forModuleName:@"Tealeaf"];
+//
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemSetGestureDetector value:@"false" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:kConfigurableItemLogViewLayoutOnScreenTransition value:@"false" forModuleName:@"Tealeaf"];
+//    
+//    [[EOApplicationHelper sharedInstance] setConfigItem:@"textBox:textChange" value:@"false" forModuleName:@"Tealeaf"];
+//
+//    [[EOApplicationHelper sharedInstance] setConfigItem:@"gestures" value:@"0" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:@"autolog:FlutterView:click" value:@"0" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:@"autolog:canvas:click" value:@"0" forModuleName:@"Tealeaf"];
+//    [[EOApplicationHelper sharedInstance] setConfigItem:@"canvas:click" value:@"0" forModuleName:@"Tealeaf"];
+
+    [[TLFApplicationHelper sharedInstance] enableTealeafFramework];
+    
+    
+    
+    
+
 
     NSLog(@"Tealeaf Enabled: %@", [[TLFApplicationHelper sharedInstance] isTLFEnabled] ? @"Yes" : @"No");
     NSLog(@"Device Pixel Density (scale): %f", _scale);
@@ -709,30 +754,33 @@
 }
 
 - (void) tlScreenview: (NSDictionary *) args {
-    // Delay to ensure UI screen is fully rendered
-    double delayInSeconds = 0.5;
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-    dispatch_after(popTime, dispatch_get_main_queue(), ^{
-        // Code to be executed after a delay of 0.5 seconds (500 milliseconds)
-        NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
-        NSString *logicalPageName = (NSString *) [self checkForParameter:args withKey:@"logicalPageName"];
-        NSObject *layouts   = args[@"layoutParameters"];
-        
-        if (layouts != nil) {
-            if ([layouts isKindOfClass:[NSArray class]]) {
-                NSLog(@"layoutParameters: %@", [layouts class]);
-            }
-            else {
-                NSLog(@"Error in layout type");
-                layouts = nil;
-            }
-        }
+  // Delay to ensure UI screen is fully rendered
+  double delayInSeconds = 0.5;
+  dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+  dispatch_after(popTime, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+    // Code to be executed after a delay of 0.5 seconds (500 milliseconds)
+    NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
+    NSString *logicalPageName = (NSString *) [self checkForParameter:args withKey:@"logicalPageName"];
+    NSObject *layouts  = args[@"layoutParameters"];
+     
+    if (layouts != nil) {
+      if ([layouts isKindOfClass:[NSArray class]]) {
+        NSLog(@"layoutParameters: %@", [layouts class]);
+      }
+      else {
+        NSLog(@"Error in layout type");
+        layouts = nil;
+      }
+    }
 
-        [self tlScreenviewAndLayout:tlType addRef:nil addLayouts:(NSArray *)layouts addLogicalPageName:logicalPageName];
-        
-        NSLog(@"Screenview, tlType: %@", tlType);
-    });
+    [self tlScreenviewAndLayout:tlType addRef:nil addLayouts:(NSArray *)layouts addLogicalPageName:logicalPageName];
+     
+    NSLog(@"Screenview, tlType: %@", tlType);
+  });
 }
+
+
+
 
 - (void) tlPointerEvent: (NSDictionary *) args {
     [self getPointerEvent:args];
@@ -762,174 +810,234 @@ NSString *processString(NSString *inputString) {
 }
 
 
-- (void) tlGestureEvent: (NSDictionary *) args {
-    @try {
-        NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
-        NSString *wid    = (NSString *) [self checkForParameter:args withKey:@"id"];
-        NSString *target = (NSString *) [self checkForParameter:args withKey:@"target"];
-        NSObject *layouts   = args[@"layoutParameters"];
-
-        BOOL     isSwipe = [tlType isEqualToString:@"swipe"];
-        BOOL     isPinch = [tlType isEqualToString:@"pinch"];
-        
-        CGFloat        vdx = 0, vdy = 0;
-        NSString       *direction = nil;
-        NSMutableArray *pointerEvents = [[NSMutableArray alloc] init];
-
-        NSDictionary *data = (NSDictionary *) args[@"data"];
-        NSDictionary *accessibility = [[NSDictionary alloc] init];
-
-        if (data != (NSDictionary *) [NSNull null]) {
-            accessibility = data[@"accessibility"];
-        }
-        
-        // New screenshot needed
-        UIImage *maskedScreenshot = nil;
-        UIImage *screenshot       = [self takeScreenShot];
-        
-        NSMutableArray *maskObjects = [@[] mutableCopy];
-        
-        NSString *logicalPageName = @"";
-        [self fixupLayoutEntries:(NSArray *)layouts addLogicalPageName: (NSString *) logicalPageName returnMaskArray:maskObjects];
-        
-        if ([maskObjects count] > 0 && screenshot != nil) {
-            maskedScreenshot = [self maskImageWithObjects:screenshot withObjects:maskObjects];
-        }
-        if (screenshot == nil) {
-            screenshot = [UIImage imageNamed:@""];
-        }
-        CGSize screenSize = [UIScreen mainScreen].bounds.size;
-        TlImage *tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
-        
-        if (maskedScreenshot != nil) {
-            [tlImage updateWithImage:maskedScreenshot];
-        }
-        
-        NSString *originalHash = [tlImage getOriginalHash];
-        
-        if ([_lastHash isEqualToString:originalHash]) {
-            NSLog(@"Not logging screenview as unmasked screen has not updated, hash: %@", originalHash);
-            return;
-        }
-        _lastHash = originalHash;
-        
-        NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
-        
-        _lastScreen = base64ImageString.length > 0 ? base64ImageString : _lastScreen;
-
-        if (isPinch || isSwipe) {
-            PointerEvent *pointerEvent1, *pointerEvent2;
-
-            NSDictionary *data = (NSDictionary *) [self checkForParameter:args withKey:@"data"];
-         
-            CGFloat  x1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dx"] floatValue];
-            CGFloat  y1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dy"] floatValue];
-            NSString *ts1 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer1" withSubKey:@"ts"];
-            
-            pointerEvent1 = [[PointerEvent alloc] initWith:@"DOWN" andX:x1 andY:y1 andTs:ts1 andDown:0 andPressure:0 andKind:0];
-            
-            CGFloat  x2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dx"] floatValue];
-            CGFloat  y2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dy"] floatValue];
-            NSString *ts2 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer2" withSubKey:@"ts"];
-                
-            pointerEvent2 = [[PointerEvent alloc] initWith:@"DOWN" andX:x2 andY:y2 andTs:ts2 andDown:0 andPressure:0 andKind:0];
-            
-            vdx       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dx"] floatValue];
-            vdy       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dy"] floatValue];
-            direction = (NSString *)  [self checkForParameter:data withKey:@"direction"];
-            
-            int times = isPinch ? 2 : 1;
-            
-            for (int i = 0; i < times; i++) {
-                [pointerEvents addObject:pointerEvent1];
-                [pointerEvents addObject:pointerEvent2];
-            }
-        }
-        else {
-            [pointerEvents addObject:_lastMotionUpEvent != nil ? _lastMotionUpEvent : @"Tap"];
-        }
-        
-        NSMutableArray *touches = [[NSMutableArray alloc] init];
-        NSMutableArray *touch   = nil;
-        int touchCount = (int) [pointerEvents count];
-
-        for (int i = 0; i < touchCount; /* inc at bottom of loop for test */) {
-            PointerEvent *pointerEvent = pointerEvents[i];
-            
-            if (touch == nil) {
-                touch = [[NSMutableArray alloc] init];
-            }
-            
-            CGFloat x      = pointerEvent.x * _scale;
-            CGFloat y      = pointerEvent.y * _scale;
-            CGFloat relX   = x / _screenWidth;
-            CGFloat relY   = y / _screenHeight;
-            NSString *xy   = [NSString stringWithFormat:@"%f,%f", relX, relY];
-            
-            NSString *type = @"";
-            if (target != nil && target.length > 0) {
-                type = processString(target);
-            }
-
-            [touch addObject: @{
-                @"position": @{
-                    @"x": @(pointerEvent.x),
-                    @"y": @(pointerEvent.y)
-                },
-                @"control":  @{
-                    @"position": @{
-                        @"height": @(_screenHeight),
-                        @"width":  @(_screenWidth),
-                        @"relXY":  xy,
-                    },
-                    @"id":       wid,
-                    @"idType":   @(-4),
-                    @"type":     type,
-                    @"subType":  @"TODO FIX",
-                    @"tlType":   type,
-                    @"accessibility": (accessibility ?: [NSNull null]),
-                },
-            }];
-            // After two 'touch' entries, move to next element in touches arrays (for pinch and swipe)
-            i += 1;
-            if ((i % 2) == 0 || i >= touchCount) {
-                [touches addObject:touch];
-                touch = nil;
-            }
-        }
-        
-        // TODO: Need a screenshot for Gesture, will need optimiztion for masking
-//        UIImage *screenshot       = [self takeScreenShot];
-//        CGSize screenSize = [UIScreen mainScreen].bounds.size;
-//        TlImage *tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
-//        NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
-//        _lastScreen = base64ImageString;
-        
-        NSMutableDictionary *gestureMessage =[@{
-            @"event": [@{
-                // TBD: Need to check: Should this mimic Android version? Verify correctness for Pinch "type"
-                @"type":    isPinch ? @"onScale" : _lastMotionUpEvent != nil ? _lastMotionUpEvent.action : @"Tap",
-                @"tlEvent": tlType
-            } mutableCopy],
-            @"touches": touches,
-            @"base64Representation": _lastScreen
-        } mutableCopy];
-        
-        if (direction != nil) {
-            gestureMessage[@"direction"] = direction;
-            gestureMessage[@"velocityX"] = @(vdx);
-            gestureMessage[@"velocityY"] = @(vdy);
-        }
-        
-        [self tlLogMessage:gestureMessage addType: @11];
-        
-        _lastDown = 0L;
-        _lastMotionUpEvent = _firstMotionEvent = nil;
-    
-    } @catch (NSException *exception) {
-        NSLog(@"An exception occurred: %@", exception);
-    }
+- (CGFloat)getAsFloat:(id)o {
+    NSAssert(o != nil, @"Object cannot be nil");
+    return [o floatValue];
 }
+
+- (NSDictionary<NSString *, id> *)getCurrentState:(NSDictionary<NSString *, id> *)wLayout {
+    id currStateObject = wLayout[@"currState"];
+
+    if ([currStateObject isKindOfClass:[NSDictionary class]]) {
+        NSDictionary<NSString *, id> *state = (NSDictionary<NSString *, id> *)currStateObject;
+        return state;
+    }
+    return nil;
+}
+
+- (Position *)getPositionFromLayout:(NSDictionary<NSString *, id> *)wLayout {
+    CGFloat pixelDensity = [UIScreen mainScreen].scale;;
+    BOOL isMasked = [[NSString stringWithFormat:@"%@", wLayout[@"masked"]] isEqualToString:@"true"];
+    id positionObject = wLayout[@"position"];
+    Position *position = [[Position alloc] init];
+
+    if ([positionObject isKindOfClass:[NSDictionary class]]) {
+        NSDictionary<NSString *, NSString *> *widgetPosition = (NSDictionary<NSString *, NSString *> *)positionObject;
+        int x = roundf([self getAsFloat:widgetPosition[@"x"]] * pixelDensity);
+        int y = roundf([self getAsFloat:widgetPosition[@"y"]] * pixelDensity);
+        int width = roundf([self getAsFloat:widgetPosition[@"width"]] * pixelDensity);
+        int height = roundf([self getAsFloat:widgetPosition[@"height"]] * pixelDensity);
+        CGRect rect = CGRectMake(x, y, width, height);
+        
+        NSDictionary<NSString *, id> *currentState = [self getCurrentState:wLayout];
+        NSString *text = (currentState == nil) ? @"" : [NSString stringWithFormat:@"%@", currentState[@"text"]];
+
+//        [TlFlutterPlugin.LOGGER logWithLevel:LevelInfo message:[NSString stringWithFormat:@"*** Layout -- x: %d, y: %d, text: %@", x, y, text]];
+        NSLog(@"Position: rect = %@, x = %d, y = %d, width = %d, height = %d, label = %@",
+              NSStringFromCGRect(position.rect), position.x, position.y, position.width, position.height, position.label);
+        
+        [position setRect:rect];
+        [position setX:x];
+        [position setY:y];
+        [position setHeight:height];
+        [position setWidth:isMasked ? 0 : width];
+        [position setLabel:isMasked ? text : nil];
+    }
+
+    return position;
+}
+
++ (float)getAsFloat:(NSString *)string {
+    return [string floatValue];
+}
+
++ (NSDictionary<NSString *, id> *)getCurrentState:(NSDictionary<NSString *, id> *)wLayout {
+    // Implement this method based on your logic to get the current state.
+    return nil;
+}
+
+- (void) tlGestureEvent: (NSDictionary *) args {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        @try {
+            NSString *tlType = (NSString *) [self checkForParameter:args withKey:@"tlType"];
+            NSString *wid    = (NSString *) [self checkForParameter:args withKey:@"id"];
+            NSString *target = (NSString *) [self checkForParameter:args withKey:@"target"];
+            NSObject *layouts   = args[@"layoutParameters"];
+            
+
+            BOOL     isSwipe = [tlType isEqualToString:@"swipe"];
+            BOOL     isPinch = [tlType isEqualToString:@"pinch"];
+            
+            CGFloat        vdx = 0, vdy = 0;
+            NSString       *direction = nil;
+            NSMutableArray *pointerEvents = [[NSMutableArray alloc] init];
+
+            NSDictionary *data = (NSDictionary *) args[@"data"];
+            NSDictionary *accessibility = [[NSDictionary alloc] init];
+
+            if (data != (NSDictionary *) [NSNull null]) {
+                accessibility = data[@"accessibility"];
+            }
+            
+            // New screenshot needed
+            UIImage *maskedScreenshot = nil;
+            UIImage *screenshot       = [self takeScreenShot];
+            
+            NSMutableArray *maskObjects = [@[] mutableCopy];
+            
+            NSString *logicalPageName = @"";
+            [self fixupLayoutEntries:(NSArray *)layouts addLogicalPageName: (NSString *) logicalPageName returnMaskArray:maskObjects];
+            
+            if ([maskObjects count] > 0 && screenshot != nil) {
+                maskedScreenshot = [self maskImageWithObjects:screenshot withObjects:maskObjects];
+            }
+            if (screenshot == nil) {
+                screenshot = [UIImage imageNamed:@""];
+            }
+            CGSize screenSize = [UIScreen mainScreen].bounds.size;
+            
+            TlImage *tlImage;
+            if (maskedScreenshot != nil) {
+                tlImage  = [[TlImage alloc] initWithImage:maskedScreenshot andSize:screenSize andConfig:_basicConfig];
+            } else {
+                tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
+            }
+            
+            NSString *originalHash = [tlImage getOriginalHash];
+            
+            if ([_lastHash isEqualToString:originalHash]) {
+                NSLog(@"Not logging screenview as unmasked screen has not updated, hash: %@", originalHash);
+                return;
+            }
+            _lastHash = originalHash;
+            
+            NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
+            
+            _lastScreen = base64ImageString.length > 0 ? base64ImageString : _lastScreen;
+
+            if (isPinch || isSwipe) {
+                PointerEvent *pointerEvent1, *pointerEvent2;
+
+                NSDictionary *data = (NSDictionary *) [self checkForParameter:args withKey:@"data"];
+             
+                CGFloat  x1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dx"] floatValue];
+                CGFloat  y1   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer1" withSubKey:@"dy"] floatValue];
+                NSString *ts1 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer1" withSubKey:@"ts"];
+                
+                pointerEvent1 = [[PointerEvent alloc] initWith:@"DOWN" andX:x1 andY:y1 andTs:ts1 andDown:0 andPressure:0 andKind:0];
+                
+                CGFloat  x2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dx"] floatValue];
+                CGFloat  y2   = [(NSNumber *) [self checkForParameter:data withKey:@"pointer2" withSubKey:@"dy"] floatValue];
+                NSString *ts2 = isPinch ? @"0" : (NSString *)[self checkForParameter:data withKey:@"pointer2" withSubKey:@"ts"];
+                    
+                pointerEvent2 = [[PointerEvent alloc] initWith:@"DOWN" andX:x2 andY:y2 andTs:ts2 andDown:0 andPressure:0 andKind:0];
+                
+                vdx       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dx"] floatValue];
+                vdy       = [(NSNumber *) [self checkForParameter:data withKey:@"velocity" withSubKey:@"dy"] floatValue];
+                direction = (NSString *)  [self checkForParameter:data withKey:@"direction"];
+                
+                int times = isPinch ? 2 : 1;
+                
+                for (int i = 0; i < times; i++) {
+                    [pointerEvents addObject:pointerEvent1];
+                    [pointerEvents addObject:pointerEvent2];
+                }
+            }
+            else {
+                [pointerEvents addObject:_lastMotionUpEvent != nil ? _lastMotionUpEvent : @"Tap"];
+            }
+            
+            NSMutableArray *touches = [[NSMutableArray alloc] init];
+            NSMutableArray *touch   = nil;
+            int touchCount = (int) [pointerEvents count];
+
+            for (int i = 0; i < touchCount; /* inc at bottom of loop for test */) {
+                PointerEvent *pointerEvent = pointerEvents[i];
+                
+                if (touch == nil) {
+                    touch = [[NSMutableArray alloc] init];
+                }
+                
+                CGFloat x      = pointerEvent.x * _scale;
+                CGFloat y      = pointerEvent.y * _scale;
+                CGFloat relX   = x / _screenWidth;
+                CGFloat relY   = y / _screenHeight;
+                NSString *xy   = [NSString stringWithFormat:@"%f,%f", relX, relY];
+                
+                NSString *type = @"";
+                if (target != nil && target.length > 0) {
+                    type = processString(target);
+                }
+
+                [touch addObject: @{
+                    @"position": @{
+                        @"x": @(pointerEvent.x),
+                        @"y": @(pointerEvent.y)
+                    },
+                    @"control":  @{
+                        @"position": @{
+                            @"height": @(_screenHeight),
+                            @"width":  @(_screenWidth),
+                            @"relXY":  xy,
+                        },
+                        @"id":       wid,
+                        @"idType":   @(-4),
+                        @"type":     type,
+                        @"subType":  @"FlutterViewGeneric",
+                        @"tlType":   type,
+                        @"accessibility": (accessibility ?: [NSNull null]),
+                    },
+                }];
+                // After two 'touch' entries, move to next element in touches arrays (for pinch and swipe)
+                i += 1;
+                if ((i % 2) == 0 || i >= touchCount) {
+                    [touches addObject:touch];
+                    touch = nil;
+                }
+            }
+            
+//            UIImage *screenshot       = [self takeScreenShot];
+//            CGSize screenSize = [UIScreen mainScreen].bounds.size;
+//            TlImage *tlImage  = [[TlImage alloc] initWithImage:screenshot andSize:screenSize andConfig:_basicConfig];
+//            NSString *base64ImageString = tlImage == nil ? @"" : [tlImage getBase64String];
+            _lastScreen = base64ImageString;
+
+            NSMutableDictionary *gestureMessage =[@{
+                @"event": [@{
+                    @"type":    isPinch ? @"onScale" : _lastMotionUpEvent != nil ? _lastMotionUpEvent.action : @"Tap",
+                    @"tlEvent": tlType
+                } mutableCopy],
+                @"touches": touches,
+                @"base64Representation": _lastScreen
+            } mutableCopy];
+            
+            if (direction != nil) {
+                gestureMessage[@"direction"] = direction;
+                gestureMessage[@"velocityX"] = @(vdx);
+                gestureMessage[@"velocityY"] = @(vdy);
+            }
+            
+            [self tlLogMessage:gestureMessage addType: @11];
+            
+            _lastDown = 0L;
+            _lastMotionUpEvent = _firstMotionEvent = nil;
+        
+        } @catch (NSException *exception) {
+            NSLog(@"An exception occurred: %@", exception);
+        }
+    });
+}
+
 
 - (void) tlFocusChanged: (NSDictionary *) args {
     @try {
@@ -1085,3 +1193,4 @@ NSString *processString(NSString *inputString) {
 }
 
 @end
+

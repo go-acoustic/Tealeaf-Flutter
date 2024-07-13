@@ -90,7 +90,7 @@ class Tealeaf extends StatelessWidget {
 
             tlLogger.v("Is swiping? ${getIsSwiping()}");
 
-            // if (!getIsSwiping()) {
+            if (!Tealeaf.isSwiping) {
               // Handle onPointerUp event here
               // Start time as reference when there's navigation change
               Tealeaf.startTime = DateTime.now().millisecondsSinceEpoch;
@@ -110,9 +110,7 @@ class Tealeaf extends StatelessWidget {
                 // Handle errors if the async function throws an error
                 tlLogger.e('Error: $error');
               });
-
-              Tealeaf.isSwiping = false;
-            // }
+            }
           },
           onPointerDown: (details) {
             TealeafHelper.pointerEventHelper("DOWN", details);
@@ -120,7 +118,6 @@ class Tealeaf extends StatelessWidget {
           onPointerMove: (details) {
             tlLogger
                 .v("Gesture move, swipe event checkForScroll() will fire..");
-            Tealeaf.isSwiping = true;
             TealeafHelper.pointerEventHelper("MOVE", details);
           },
           child: child,

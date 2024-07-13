@@ -2,11 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:tealeaf_cli/tealeaf_cli.dart' as tealeaf_cli;
 import 'package:tealeaf_cli/models/basic_config_model.dart';
-import 'package:dcli/dcli.dart';
 
 void main(List<String> arguments) async {
-  bool debug = false;
-  Settings().setVerbose(enabled: debug);
   stdout.writeln('tealeaf_cli working...');
 
   String? appKey;

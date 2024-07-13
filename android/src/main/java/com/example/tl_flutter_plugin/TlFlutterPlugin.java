@@ -3,7 +3,6 @@ package com.example.tl_flutter_plugin;
 import static com.example.tl_flutter_plugin.ScreenUtil.screenSnapshot;
 import static com.tl.uic.util.ValueUtil.compareAccessibilityListAndMask;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.res.TypedArray;
@@ -35,14 +34,12 @@ import com.tl.uic.model.EventInfo;
 import com.tl.uic.model.Gesture;
 import com.tl.uic.model.GestureControl;
 import com.tl.uic.model.GestureControlPosition;
-import com.tl.uic.model.GesturePlaceHolder;
 import com.tl.uic.model.IdType;
 import com.tl.uic.model.Image;
 import com.tl.uic.model.Layout;
 import com.tl.uic.model.LayoutPlaceHolder;
 import com.tl.uic.model.Position;
 import com.tl.uic.model.PropertyName;
-import com.tl.uic.model.Screenview;
 import com.tl.uic.model.ScreenviewType;
 import com.tl.uic.model.Style;
 import com.tl.uic.model.Touch;
@@ -56,10 +53,7 @@ import com.tl.uic.util.ValueUtil;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
-import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -73,7 +67,6 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterEngineCache;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -128,7 +121,7 @@ class ScreenUtil {
 
     /**
      * Take a screenshot using Flutter renderer.  Note:  getBitmap() requires UI thread.
-     * 
+     *
      * @param activity
      * @param renderer
      * @return Bitmap.
@@ -139,7 +132,7 @@ class ScreenUtil {
         final CountDownLatch latch = new CountDownLatch(1);
 
         // Ensure there's delay to allow async to finish drawing on the screen.  0 delay for Gesture.
-        Thread.sleep(GestureUtil.isFlutterGestureEvent ? 0 : 500 );
+        Thread.sleep(GestureUtil.isFlutterGestureEvent ? 0 : 500);
 
         activity.runOnUiThread(() -> {
             view.setDrawingCacheEnabled(true);
@@ -333,7 +326,7 @@ class ScreenUtil {
             @SuppressWarnings("unchecked") final HashMap<String, String> accessibility = (HashMap<String, String>) wLayout.get("accessibility");
 
             String maskedString = null;
-            
+
             if (accessibility != null) {
                 final Accessibility accessibilityForMask = new Accessibility(
                         accessibility.get("id"),
@@ -352,7 +345,7 @@ class ScreenUtil {
                     }
                     LogInternal.log("Masked label " + accessibility.get("label") + ", to " + maskedString);
                 }
-                
+
                 baseTarget.setAccessibility(accessibilityForMask);
             }
 
@@ -453,7 +446,7 @@ class ScreenUtil {
 
                 baseTarget.setImage(image);
             }
-            
+
             layout.getControls().add(baseTarget);
         }
     }
@@ -988,7 +981,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
 
     private boolean tlLogPerformanceMessage(Object args) {
         LOGGER.log(Level.INFO, "Tealeaf log performance message");
-        
+
         final int logLevel = EOMonitoringLevel.kEOMonitoringLevelInfo.getValue();
         TLFPerformanceNavigationType navigationType;
         final int naviagtionInt = Integer.parseInt(checkForParameter(args, "navigationType"));
@@ -1055,7 +1048,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         final float x = Float.parseFloat(checkForParameter(args, "x"));
         final float y = Float.parseFloat(checkForParameter(args, "y"));
         final boolean focused = Boolean.parseBoolean(checkForParameter(args, "focused"));
-        
+
         // Get the view
         final Activity activity = getActivity();
         final View rootView = activity.getWindow().getDecorView();
@@ -1159,7 +1152,7 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
                     }
                 }
             } catch (final Exception e) {
-                com.tl.uic.util.LogInternal.logException(e, "Tealeaf plugin error:  Trying to log screenview.");
+                com.tl.uic.util.LogInternal.logException(e, "Tealeaf plugin error:  Trying to log gesture.");
             } finally {
                 GestureUtil.isFlutterGestureEvent = false;
             }
@@ -1171,19 +1164,6 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
         LOGGER.log(Level.INFO, "Tealeaf pointer event at: " + checkForParameter(args, "position", "dx") +
                 ',' + checkForParameter(args, "position", "dy"));
 
-        if (EOCore.getConfigItemBoolean("SetGestureDetector", TealeafEOLifecycleObject.getInstance())) {
-            final MotionEvent motionEvent = motionEvent(args);
-            final int action = motionEvent.getAction();
-
-            if (action == MotionEvent.ACTION_UP) {
-                lastPointerUpEvent = args;
-                if (Tealeaf.getGesturePlaceHolder().size() < 1) {
-                    final GesturePlaceHolder gph = new GesturePlaceHolder(Tealeaf.getCurrentSessionId(), "");
-                    Tealeaf.getGesturePlaceHolder().add(gph);
-                    TLFCache.addMessage(gph); // Placeholder needed fr Android native version of gesture control
-                }
-            }
-        }
         lastPointerEvent = args;
     }
 
@@ -1419,35 +1399,40 @@ public class TlFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCall
     }
 
     private MotionEvent motionEvent() throws Exception {
-        return motionEvent(lastPointerEvent);
+        return lastPointerEvent != null ? motionEvent(lastPointerEvent) : null;
     }
 
     private MotionEvent motionEvent(Object map) throws Exception {
-        final String event = checkForParameter(map, "action");
-        final int action = (event.equals("DOWN") ? MotionEvent.ACTION_DOWN :
-                (event.equals("UP") ? MotionEvent.ACTION_UP :
-                        (event.equals("MOVE") ? MotionEvent.ACTION_MOVE : -1)));
-        final Double dx = checkForParameter(map, "position", "dx");
-        final Double dy = checkForParameter(map, "position", "dy");
-        final Double dp = checkForParameter(map, "pressure");
-        final float pressure = dp.floatValue();
-        final int device = checkForParameter(map, "kind");
-        final long timestamp = Long.parseLong(checkForParameter(map, "timestamp"));
+        try {
+            final String event = checkForParameter(map, "action");
+            final int action = (event.equals("DOWN") ? MotionEvent.ACTION_DOWN :
+                    (event.equals("UP") ? MotionEvent.ACTION_UP :
+                            (event.equals("MOVE") ? MotionEvent.ACTION_MOVE : -1)));
+            final Double dx = checkForParameter(map, "position", "dx");
+            final Double dy = checkForParameter(map, "position", "dy");
+            final Double dp = checkForParameter(map, "pressure");
+            final float pressure = dp.floatValue();
+            final int device = checkForParameter(map, "kind");
+            final long timestamp = Long.parseLong(checkForParameter(map, "timestamp"));
 
-        final float x = dx.floatValue() * withDensity(scaleWidth);
-        final float y = dy.floatValue() * withDensity(scaleHeight);
+            final float x = dx.floatValue() * withDensity(scaleWidth);
+            final float y = dy.floatValue() * withDensity(scaleHeight);
 
-        LOGGER.log(Level.INFO, "Motion Event - x,y: " + x + "," + y + ", density (scaled), x: " +
-                scaleWidth + ", y: " + scaleHeight);
+            LOGGER.log(Level.INFO, "Motion Event - x,y: " + x + "," + y + ", density (scaled), x: " +
+                    scaleWidth + ", y: " + scaleHeight);
 
-        final MotionEvent me = MotionEvent.obtain(timestamp - lastDown, timestamp, action, x, y, pressure,
-                0.1f, 0, 0.1f, 0.1f, device, 0);
+            final MotionEvent me = MotionEvent.obtain(timestamp - lastDown, timestamp, action, x, y, pressure,
+                    0.1f, 0, 0.1f, 0.1f, device, 0);
 
-        if (action == MotionEvent.ACTION_DOWN) {
-            lastDown = timestamp;
+            if (action == MotionEvent.ACTION_DOWN) {
+                lastDown = timestamp;
+            }
+
+            return me;
+        } catch (final Exception e) {
+            com.tl.uic.util.LogInternal.logException(e, "Connect plugin error:  Trying to get MotionEvent.");
         }
-
-        return me;
+        return null;
     }
 
     private MotionEvent motionEvent(double dx, double dy, long timestamp) {
